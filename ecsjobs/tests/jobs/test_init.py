@@ -102,10 +102,7 @@ class TestSchemaForJobs(object):
             'properties': {
                 'name': {'type': 'string'},
                 'schedule': {'type': 'string'},
-                'class_name': {
-                    'type': 'string',
-                    'pattern': '^FakeJobOne$'
-                },
+                'class_name': {'enum': ['FakeJobOne']},
                 'prop1': {'type': 'string'},
                 'prop2': {'type': 'array'}
             },
@@ -131,10 +128,7 @@ class TestSchemaForJobs(object):
             'properties': {
                 'name': {'type': 'string'},
                 'schedule': {'type': 'string'},
-                'class_name': {
-                    'type': 'string',
-                    'pattern': '^FakeJobTwo$'
-                },
+                'class_name': {'enum': ['FakeJobTwo']},
                 'propBar': {'type': 'string'}
             },
             'required': [

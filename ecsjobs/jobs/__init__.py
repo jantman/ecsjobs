@@ -66,11 +66,6 @@ def schema_for_job_class(cls):
     s['required'] = sorted(list(set(
         s.get('required', []) + Job._schema_dict['required']
     )))
-    s['properties']['class_name'] = {
-        # unfortunately jsonschema==2.6.0 doesn't handle single-valued enums
-        # 'type': {'enum': [cls.__name__]}
-        'type': 'string',
-        'pattern': '^%s$' % cls.__name__
-    }
+    s['properties']['class_name'] = {'enum': [cls.__name__]}
     s['title'] = 'Configuration for %s class instance' % cls.__name__
     return s

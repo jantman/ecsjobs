@@ -82,14 +82,6 @@ class TestValidate(object):
 
 class TestValidateExamples(object):
 
-    def test_show_schema(self):
-        s = Schema()
-        import json
-        print(json.dumps(
-            s.schema_dict, sort_keys=True, indent=4, separators=(',', ': ')
-        ))
-        assert 1 == 0
-
     def test_simple_success(self):
         config_yaml = dedent("""
         global:
@@ -125,3 +117,9 @@ class TestValidateExamples(object):
         conf = yaml.load(config_yaml)
         with pytest.raises(ValidationError) as exc:
             Schema().validate(conf)
+        assert list(exc.value.relative_path) == ['jobs', 1]
+        assert exc.value.instance == conf['jobs'][1]
+        assert exc.value.validator == 'anyOf'
+        assert list(exc.value.relative_schema_path) == [
+            'properties', 'jobs', 'items', 'anyOf'
+        ]
