@@ -58,7 +58,7 @@ class Config(object):
         self._raw_conf = {}
         self._global_conf = {}
         self._jobs_conf = []
-        self._jobs = {}
+        self._jobs = []
         self._load_config()
         self._validate_config()
         self._make_jobs()
@@ -116,7 +116,9 @@ class Config(object):
         :rtype: dict
         """
         res = {'global': {}, 'jobs': []}
-        for obj in bucket.objects.filter(Prefix=prefix):
+        for obj in sorted(
+            list(bucket.objects.filter(Prefix=prefix)), key=lambda x: x.key
+        ):
             fname = obj.key.replace(prefix, '')
             if not self._key_is_yaml(fname):
                 continue
@@ -191,5 +193,5 @@ class Config(object):
                         j['class_name'], j['name']
                     )
                 )
-            self._jobs[j['name']] = cls(**j)
+            self._jobs.append(cls(**j))
         logger.info('Created %d Job instances', len(self._jobs))

@@ -36,11 +36,9 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 from ecsjobs.jobs.base import Job
-from ecsjobs.jobs.ecs_task import EcsTask
-from ecsjobs.jobs.docker_exec import DockerExec
-from ecsjobs.jobs.ecs_docker_exec import EcsDockerExec
-from ecsjobs.jobs.local_command import LocalCommand
 
-jobclasses = {}
-for cls in Job.__subclasses__():
-    jobclasses[cls.__name__] = cls
+
+class LocalCommand(Job):
+
+    def __init__(self, name, schedule, **kwargs):
+        super(LocalCommand, self).__init__(name, schedule)

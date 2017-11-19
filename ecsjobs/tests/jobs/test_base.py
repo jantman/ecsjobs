@@ -36,11 +36,30 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 from ecsjobs.jobs.base import Job
-from ecsjobs.jobs.ecs_task import EcsTask
-from ecsjobs.jobs.docker_exec import DockerExec
-from ecsjobs.jobs.ecs_docker_exec import EcsDockerExec
-from ecsjobs.jobs.local_command import LocalCommand
 
-jobclasses = {}
-for cls in Job.__subclasses__():
-    jobclasses[cls.__name__] = cls
+
+class TestBaseJob(object):
+
+    def setup(self):
+        self.cls = Job('jname', 'schedname')
+
+    def test_init(self):
+        cls = Job('jname', 'schedname')
+        assert cls._name == 'jname'
+        assert cls._schedule_name == 'schedname'
+        assert cls._started is False
+        assert cls._finished is False
+
+    def test_name(self):
+        assert self.cls.name == 'jname'
+
+    def test_schedule_name(self):
+        assert self.cls.schedule_name == 'schedname'
+
+    def test_is_started(self):
+        self.cls._started = 2
+        assert self.cls.is_started == 2
+
+    def test_is_finished(self):
+        self.cls._finished = 7
+        assert self.cls.is_finished == 7

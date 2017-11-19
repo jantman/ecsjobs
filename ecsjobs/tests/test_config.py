@@ -85,7 +85,7 @@ class TestInit(object):
         assert cls.s3 == m_s3
         assert cls._global_conf == {}
         assert cls._jobs_conf == []
-        assert cls._jobs == {}
+        assert cls._jobs == []
         assert cls._raw_conf == {}
         assert mock_logger.mock_calls == [
             call.debug('Initializing Config using bucket_name=%s key_name=%s',
@@ -175,6 +175,14 @@ class TestLoadConfig(ConfigTester):
 class TestGetMultipartConfig(ConfigTester):
 
     def test_simple(self):
+
+        def se_key_is_yaml(klass, k):
+            if k.endswith('.yml'):
+                return True
+            if k.endswith('.yaml'):
+                return True
+            return False
+
         m_obj1 = Mock(key='/foo/bar/conf/job1.yml')
         m_obj2 = Mock(key='/foo/bar/conf/foo.txt')
         m_obj3 = Mock(key='/foo/bar/conf/global.yaml')
@@ -190,10 +198,10 @@ class TestGetMultipartConfig(ConfigTester):
             _key_is_yaml=DEFAULT,
             _get_yaml_from_s3=DEFAULT
         ) as mocks:
-            mocks['_key_is_yaml'].side_effect = [True, False, True, False, True]
+            mocks['_key_is_yaml'].side_effect = se_key_is_yaml
             mocks['_get_yaml_from_s3'].side_effect = [
-                {'conf': 'job1'},
                 {'conf': 'global'},
+                {'conf': 'job1'},
                 {'conf': 'job2'}
             ]
             res = self.cls._get_multipart_config(bkt, '/foo/bar/conf/')
@@ -208,15 +216,15 @@ class TestGetMultipartConfig(ConfigTester):
             call.objects.filter(Prefix='/foo/bar/conf/')
         ]
         assert mocks['_key_is_yaml'].mock_calls == [
-            call(self.cls, 'job1.yml'),
             call(self.cls, 'foo.txt'),
-            call(self.cls, 'global.yaml'),
             call(self.cls, 'global.pdf'),
+            call(self.cls, 'global.yaml'),
+            call(self.cls, 'job1.yml'),
             call(self.cls, 'job2.yaml')
         ]
         assert mocks['_get_yaml_from_s3'].mock_calls == [
-            call(self.cls, bkt, '/foo/bar/conf/job1.yml'),
             call(self.cls, bkt, '/foo/bar/conf/global.yaml'),
+            call(self.cls, bkt, '/foo/bar/conf/job1.yml'),
             call(self.cls, bkt, '/foo/bar/conf/job2.yaml')
         ]
 
@@ -345,13 +353,13 @@ class TestMakeJobs(ConfigTester):
         with patch('%s.jobclasses' % pbm, jclasses):
             self.cls._make_jobs()
         assert len(self.cls._jobs) == 3
-        assert self.cls._jobs['foo'].kwargs == {
+        assert self.cls._jobs[0].kwargs == {
             'class_name': 'Foo', 'name': 'foo', 'schedule': 's1'
         }
-        assert self.cls._jobs['foo2'].kwargs == {
+        assert self.cls._jobs[1].kwargs == {
             'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'
         }
-        assert self.cls._jobs['bar'].kwargs == {
+        assert self.cls._jobs[2].kwargs == {
             'class_name': 'Bar', 'name': 'bar', 'schedule': 's1'
         }
 
@@ -369,9 +377,9 @@ class TestMakeJobs(ConfigTester):
                 self.cls._make_jobs()
         assert str(exc.value) == 'ERROR: No known Job subclass "Bar" (job bar)'
         assert len(self.cls._jobs) == 2
-        assert self.cls._jobs['foo'].kwargs == {
+        assert self.cls._jobs[0].kwargs == {
             'class_name': 'Foo', 'name': 'foo', 'schedule': 's1'
         }
-        assert self.cls._jobs['foo2'].kwargs == {
+        assert self.cls._jobs[1].kwargs == {
             'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'
         }
