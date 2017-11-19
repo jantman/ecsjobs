@@ -41,7 +41,7 @@ Job Schema
 Each job configuration file or mapping should match the following:
 
 * **name** - A unique name for the job.
-* **class_name** - The name of a :py:class:`ecsjobs.job.Job` subclass.
+* **class_name** - The name of a :py:class:`ecsjobs.jobs.base.Job` subclass.
 * **schedule** - A string to identify which jobs to run at which times.
 
 The rest of the Job keys depend on the class. See the documentation of each

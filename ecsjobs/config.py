@@ -109,7 +109,7 @@ class Config(object):
         configuration (i.e. the corresponding single-dict config).
 
         :param bucket: the S3 bucket to retrieve configs from
-        :type bucket: boto3.S3.Bucket
+        :type bucket: :py:class:`S3.Bucket <S3.Bucket>`
         :param prefix: prefix for configuration files
         :type prefix: str
         :return: combined configuration dict
@@ -132,7 +132,7 @@ class Config(object):
         Retrieve the contents of a file from S3 and deserialize the YAML.
 
         :param bucket: the S3 bucket to retrieve the file from
-        :type bucket: boto3.S3.Bucket
+        :type bucket: :py:class:`S3.Bucket <S3.Bucket>`
         :param key: key/path of the file
         :type key: str
         :return: deserialized YAML file contents
