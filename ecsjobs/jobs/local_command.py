@@ -40,5 +40,15 @@ from ecsjobs.jobs.base import Job
 
 class LocalCommand(Job):
 
+    _schema_dict = {
+        'type': 'object',
+        'properties': {
+            'command': {'type': 'string'}
+        },
+        'required': [
+            'command'
+        ]
+    }
+
     def __init__(self, name, schedule, **kwargs):
         super(LocalCommand, self).__init__(name, schedule)

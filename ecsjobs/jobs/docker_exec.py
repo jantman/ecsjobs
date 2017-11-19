@@ -40,5 +40,19 @@ from ecsjobs.jobs.base import Job
 
 class DockerExec(Job):
 
+    _schema_dict = {
+        'type': 'object',
+        'properties': {
+            'name': {'type': 'string'},
+            'schedule': {'type': 'string'},
+            'class_name': {'type': 'string'}
+        },
+        'required': [
+            'name',
+            'schedule',
+            'class_name'
+        ]
+    }
+
     def __init__(self, name, schedule, **kwargs):
         super(DockerExec, self).__init__(name, schedule)

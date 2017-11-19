@@ -350,7 +350,8 @@ class TestMakeJobs(ConfigTester):
             {'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'},
             {'class_name': 'Bar', 'name': 'bar', 'schedule': 's1'},
         ]
-        with patch('%s.jobclasses' % pbm, jclasses):
+        with patch('%s.get_job_classes' % pbm) as mock_gjc:
+            mock_gjc.return_value = jclasses
             self.cls._make_jobs()
         assert len(self.cls._jobs) == 3
         assert self.cls._jobs[0].kwargs == {
@@ -372,7 +373,8 @@ class TestMakeJobs(ConfigTester):
             {'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'},
             {'class_name': 'Bar', 'name': 'bar', 'schedule': 's1'},
         ]
-        with patch('%s.jobclasses' % pbm, jclasses):
+        with patch('%s.get_job_classes' % pbm) as mock_gjc:
+            mock_gjc.return_value = jclasses
             with pytest.raises(RuntimeError) as exc:
                 self.cls._make_jobs()
         assert str(exc.value) == 'ERROR: No known Job subclass "Bar" (job bar)'

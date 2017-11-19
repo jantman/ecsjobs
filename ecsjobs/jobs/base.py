@@ -49,6 +49,21 @@ class Job(object):
     Plus whatever configuration items are required by subclasses.
     """
 
+    _schema_dict = {
+        'type': 'object',
+        'title': 'Configuration for base Job class',
+        'properties': {
+            'name': {'type': 'string'},
+            'schedule': {'type': 'string'},
+            'class_name': {'type': 'string'}
+        },
+        'required': [
+            'name',
+            'schedule',
+            'class_name'
+        ]
+    }
+
     def __init__(self, name, schedule, **kwargs):
         """
         Initialize a Job object.

@@ -35,12 +35,42 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+from copy import deepcopy
+
 from ecsjobs.jobs.base import Job
 from ecsjobs.jobs.ecs_task import EcsTask
 from ecsjobs.jobs.docker_exec import DockerExec
 from ecsjobs.jobs.ecs_docker_exec import EcsDockerExec
 from ecsjobs.jobs.local_command import LocalCommand
 
-jobclasses = {}
-for cls in Job.__subclasses__():
-    jobclasses[cls.__name__] = cls
+
+def get_job_classes():
+    jobclasses = {}
+    for cls in Job.__subclasses__():
+        jobclasses[cls.__name__] = cls
+    return jobclasses
+
+
+def schema_for_job_class(cls):
+    """
+    Given a :py:class:`ecsjobs.jobs.base.Job` subclass, return the final
+    JSONSchema for it.
+
+    :param cls: Class to get schema for
+    :type cls: ``class``
+    :return: final combined JSONSchema for the class
+    :rtype: dict
+    """
+    s = deepcopy(cls._schema_dict)
+    s['properties'].update(Job._schema_dict['properties'])
+    s['required'] = sorted(list(set(
+        s.get('required', []) + Job._schema_dict['required']
+    )))
+    s['properties']['class_name'] = {
+        # unfortunately jsonschema==2.6.0 doesn't handle single-valued enums
+        # 'type': {'enum': [cls.__name__]}
+        'type': 'string',
+        'pattern': '^%s$' % cls.__name__
+    }
+    s['title'] = 'Configuration for %s class instance' % cls.__name__
+    return s

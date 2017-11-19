@@ -40,7 +40,7 @@ import logging
 import yaml
 import boto3
 
-from ecsjobs.jobs import jobclasses
+from ecsjobs.jobs import get_job_classes
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +185,7 @@ class Config(object):
         ``self._jobs``.
         """
         logger.debug('Instantiating Job classes...')
+        jobclasses = get_job_classes()
         for j in self._raw_conf['jobs']:
             cls = jobclasses.get(j['class_name'], None)
             if cls is None:
