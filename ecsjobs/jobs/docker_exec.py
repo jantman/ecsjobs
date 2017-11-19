@@ -35,39 +35,10 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-import ecsjobs.version as version
-
-import re
+from ecsjobs.jobs.base import Job
 
 
-class TestVersion(object):
+class DockerExec(Job):
 
-    def test_project_url(self):
-        expected = 'https://github.com/jantman/ecsjobs'
-        assert version.PROJECT_URL == expected
-
-    def test_is_semver(self):
-        # see:
-        # https://github.com/mojombo/semver.org/issues/59#issuecomment-57884619
-        semver_ptn = re.compile(
-            r'^'
-            r'(?P<MAJOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<MINOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<PATCH>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'(?:-(?P<prerelease>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'(?:\+(?P<build>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'$'
-        )
-        assert semver_ptn.match(version.VERSION) is not None
+    def __init__(self, name, schedule, **kwargs):
+        super(DockerExec, self).__init__(name, schedule)

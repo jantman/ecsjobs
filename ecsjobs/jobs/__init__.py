@@ -35,39 +35,11 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-import ecsjobs.version as version
+from ecsjobs.jobs.base import Job
+from ecsjobs.jobs.ecs_task import EcsTask
+from ecsjobs.jobs.docker_exec import DockerExec
+from ecsjobs.jobs.ecs_docker_exec import EcsDockerExec
 
-import re
-
-
-class TestVersion(object):
-
-    def test_project_url(self):
-        expected = 'https://github.com/jantman/ecsjobs'
-        assert version.PROJECT_URL == expected
-
-    def test_is_semver(self):
-        # see:
-        # https://github.com/mojombo/semver.org/issues/59#issuecomment-57884619
-        semver_ptn = re.compile(
-            r'^'
-            r'(?P<MAJOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<MINOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<PATCH>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'(?:-(?P<prerelease>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'(?:\+(?P<build>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'$'
-        )
-        assert semver_ptn.match(version.VERSION) is not None
+jobclasses = {}
+for cls in Job.__subclasses__():
+    jobclasses[cls.__name__] = cls

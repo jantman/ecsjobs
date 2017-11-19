@@ -35,39 +35,70 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-import ecsjobs.version as version
 
-import re
+class Job(object):
+    """
+    Base class for all Job types/classes.
 
+    Required configuration:
 
-class TestVersion(object):
+    * **name** - A unique name for the job.
+    * **class_name** - The name of a :py:class:`ecsjobs.job.Job` subclass.
+    * **schedule** - A string to identify which jobs to run at which times.
 
-    def test_project_url(self):
-        expected = 'https://github.com/jantman/ecsjobs'
-        assert version.PROJECT_URL == expected
+    Plus whatever configuration items are required by subclasses.
+    """
 
-    def test_is_semver(self):
-        # see:
-        # https://github.com/mojombo/semver.org/issues/59#issuecomment-57884619
-        semver_ptn = re.compile(
-            r'^'
-            r'(?P<MAJOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<MINOR>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'\.'
-            r'(?P<PATCH>(?:'
-            r'0|(?:[1-9]\d*)'
-            r'))'
-            r'(?:-(?P<prerelease>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'(?:\+(?P<build>'
-            r'[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*'
-            r'))?'
-            r'$'
-        )
-        assert semver_ptn.match(version.VERSION) is not None
+    def __init__(self, name, schedule, **kwargs):
+        """
+        Initialize a Job object.
+
+        :param name: unique name for this job
+        :type name: str
+        :param schedule: the name of the schedule this job runs on
+        :type schedule: str
+        """
+        self._name = name
+        self._schedule_name = schedule
+        self._started = False
+        self._finished = False
+
+    @property
+    def name(self):
+        """
+        Return the Job Name.
+
+        :return: Job name
+        :rtype: str
+        """
+        return self._name
+
+    @property
+    def schedule_name(self):
+        """
+        Return the configured schedule name for this job.
+
+        :return: schedule name
+        :rtype: str
+        """
+        return self._schedule_name
+
+    @property
+    def is_started(self):
+        """
+        Return whether or not the Job has been started.
+
+        :return: whether or not the Job has been started
+        :rtype: bool
+        """
+        return self._started
+
+    @property
+    def is_finished(self):
+        """
+        Return whether or not the Job is finished.
+
+        :return: whether or not the Job is finished
+        :rtype: bool
+        """
+        return self._finished

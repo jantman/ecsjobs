@@ -40,35 +40,98 @@ import os
 import argparse
 import logging
 
+from ecsjobs.version import VERSION, PROJECT_URL
+from ecsjobs.config import Config
+
 logger = logging.getLogger(__name__)
 
 # suppress requests logging
-requests_log = logging.getLogger("requests")
-requests_log.setLevel(logging.WARNING)
-requests_log.propagate = True
+for lname in ['requests', 'botocore', 'boto3']:
+    l = logging.getLogger(lname)
+    l.setLevel(logging.WARNING)
+    l.propagate = True
 
 
 class EcsJobsRunner(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, config):
+        self._conf = config
+
+    def run_schedules(self, schedule_names):
+        """
+        Run the named schedules.
+
+        :param schedule_names: names of the schedules to run
+        :type schedule_names: list
+        """
+        raise NotImplementedError()
 
 
-def parse_args():
+def parse_args(argv):
+    actions = ['validate', 'run', 'list-schedules']
     p = argparse.ArgumentParser(description='ECS Jobs Wrapper/Runner')
     p.add_argument('-v', '--verbose', dest='verbose', action='count', default=0,
                    help='verbose output. specify twice for debug-level output.')
-    args = p.parse_args()
+    p.add_argument('-V', '--version', action='version',
+                   version='ecsjobs v%s <%s>' % (VERSION, PROJECT_URL))
+    p.add_argument('ACTION', action='store', type=str, choices=actions,
+                   help='Action to take; one of: %s' % actions)
+    p.add_argument('SCHEDULES', action='store', nargs='*',
+                   help='Schedule names to run; one or more.')
+    args = p.parse_args(argv)
+    if args.ACTION == 'run' and len(args.SCHEDULES) < 1:
+        raise RuntimeError(
+            'ERROR: "run" action must have one or more SCHEDULES specified'
+        )
     return args
 
 
-def main():
+def set_log_info(logger):
+    """
+    set logger level to INFO via :py:func:`~.set_log_level_format`.
+    """
+    set_log_level_format(logger, logging.INFO,
+                         '%(asctime)s %(levelname)s:%(name)s:%(message)s')
+
+
+def set_log_debug(logger):
+    """
+    set logger level to DEBUG, and debug-level output format,
+    via :py:func:`~.set_log_level_format`.
+    """
+    set_log_level_format(
+        logger,
+        logging.DEBUG,
+        "%(asctime)s [%(levelname)s %(filename)s:%(lineno)s - "
+        "%(name)s.%(funcName)s() ] %(message)s"
+    )
+
+
+def set_log_level_format(logger, level, format):
+    """
+    Set logger level and format.
+
+    :param logger: the logger object to set on
+    :type logger: logging.Logger
+    :param level: logging level; see the :py:mod:`logging` constants.
+    :type level: int
+    :param format: logging formatter format string
+    :type format: str
+    """
+    formatter = logging.Formatter(fmt=format)
+    logger.handlers[0].setFormatter(formatter)
+    logger.setLevel(level)
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
     global logger
     format = "[%(asctime)s %(levelname)s] %(message)s"
     logging.basicConfig(level=logging.WARNING, format=format)
     logger = logging.getLogger()
 
-    args = parse_args()
+    args = parse_args(argv)
 
     # set logging level
     if args.verbose > 1:
@@ -76,6 +139,24 @@ def main():
     elif args.verbose == 1:
         set_log_info(logger)
 
+    if 'ECSJOBS_BUCKET' not in os.environ:
+        raise RuntimeError(
+            'ERROR: You must set "ECSJOBS_BUCKET" environment variable.'
+        )
+    if 'ECSJOBS_KEY' not in os.environ:
+        raise RuntimeError(
+            'ERROR: You must set "ECSJOBS_KEY" environment variable.'
+        )
+    conf = Config(os.environ['ECSJOBS_BUCKET'], os.environ['ECSJOBS_KEY'])
+    if args.ACTION == 'validate':
+        # this was done when loading the config
+        raise SystemExit(0)
+    if args.ACTION == 'list-schedules':
+        for s in conf.schedule_names:
+            print(s)
+        raise SystemExit(0)
+    EcsJobsRunner(conf).run_schedules(args.SCHEDULES)
+
 
 if __name__ == "__main__":
-    main()
+    main(argv=sys.argv[1:])

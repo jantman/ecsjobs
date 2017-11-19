@@ -1,0 +1,15 @@
+global:
+  from_email: foo@example.com
+  to_email:
+    - bar@example.com
+    - baz@example.com
+jobs:
+- name: job1
+  class_name: EcsTask
+  schedule: foo
+- name: job2
+  class_name: DockerExec
+  schedule: foo
+- name: job3
+  class_name: EcsDockerExec
+  schedule: bar

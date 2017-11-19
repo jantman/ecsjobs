@@ -19,3 +19,4 @@ This is a Python project (distributed as an ECS-ready Docker image) that aims to
 and then sending an email report on their success or failure. The main shortcomings this intends to address are
 the lack of simple built-in failure monitoring for Scheduled ECS Tasks, the lack of a built-in way to execute a
 command in a running (ECS Service) container, and the lack of useful email reports.
+
