@@ -35,43 +35,47 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-from setuptools import setup, find_packages
-from ecsjobs.version import VERSION, PROJECT_URL
+import sys
+import os
+import argparse
+import logging
 
-with open('README.rst') as file:
-    long_description = file.read()
+logger = logging.getLogger(__name__)
 
-requires = [
-    'requests',
-    'boto3',
-    'docker',
-    'PyYAML',
-    'jsonschema'
-]
+# suppress requests logging
+requests_log = logging.getLogger("requests")
+requests_log.setLevel(logging.WARNING)
+requests_log.propagate = True
 
-classifiers = [
-    'Development Status :: 1 - Planning',
-    'Programming Language :: Python',
-    'Programming Language :: Python :: 3',
-    'License :: OSI Approved :: GNU Affero General Public License '
-    'v3 or later (AGPLv3+)',
-]
 
-setup(
-    name='ecsjobs',
-    version=VERSION,
-    author='Jason Antman',
-    author_email='jason@jasonantman.com',
-    packages=find_packages(),
-    url=PROJECT_URL,
-    description='A scheduled job wrapper for ECS, focused on email reporting '
-                'and adding docker exec and local command abilities.',
-    long_description=long_description,
-    install_requires=requires,
-    keywords="aws ecs cron email docker",
-    classifiers=classifiers,
-    entry_points="""
-    [console_scripts]
-    ecsjobs = ecsjobs.runner:main
-    """,
-)
+class EcsJobsRunner(object):
+
+    def __init__(self):
+        pass
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description='ECS Jobs Wrapper/Runner')
+    p.add_argument('-v', '--verbose', dest='verbose', action='count', default=0,
+                   help='verbose output. specify twice for debug-level output.')
+    args = p.parse_args()
+    return args
+
+
+def main():
+    global logger
+    format = "[%(asctime)s %(levelname)s] %(message)s"
+    logging.basicConfig(level=logging.WARNING, format=format)
+    logger = logging.getLogger()
+
+    args = parse_args()
+
+    # set logging level
+    if args.verbose > 1:
+        set_log_debug(logger)
+    elif args.verbose == 1:
+        set_log_info(logger)
+
+
+if __name__ == "__main__":
+    main()
