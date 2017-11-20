@@ -36,7 +36,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 from copy import deepcopy
-from unittest.mock import patch
+from unittest.mock import patch, call
 from textwrap import dedent
 import yaml
 from jsonschema import ValidationError
@@ -77,7 +77,32 @@ class TestSchemaInit(object):
 
 
 class TestValidate(object):
-    pass
+
+    def test_validate_ok(self):
+        with patch('%s.jsonschema.validate' % pbm) as mock_v:
+            mock_v.return_value = None
+            s = Schema()
+            s.validate({'jobs': [{'name': 'foo'}]})
+        assert mock_v.mock_calls == [
+            call({'jobs': [{'name': 'foo'}]}, s.schema_dict)
+        ]
+
+    def test_validate_dupe_jobs(self):
+        conf = {'jobs': [
+            {'name': 'foo'},
+            {'name': 'bar'},
+            {'name': 'foo'}
+        ]}
+        with patch('%s.jsonschema.validate' % pbm) as mock_v:
+            mock_v.return_value = None
+            s = Schema()
+            with pytest.raises(RuntimeError) as exc:
+                s.validate(conf)
+            assert str(exc.value) == "ERROR: Duplicate Job names in " \
+                                     "configuration: ['foo']"
+        assert mock_v.mock_calls == [
+            call(conf, s.schema_dict)
+        ]
 
 
 class TestValidateExamples(object):
