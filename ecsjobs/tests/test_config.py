@@ -84,7 +84,6 @@ class TestInit(object):
         assert cls._key_name == 'kname'
         assert cls.s3 == m_s3
         assert cls._global_conf == {}
-        assert cls._jobs_conf == []
         assert cls._jobs == []
         assert cls._raw_conf == {}
         assert mock_logger.mock_calls == [
@@ -336,6 +335,23 @@ class FakeJob(object):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
+
+
+class TestValidate(ConfigTester):
+
+    def test_validate(self):
+        self.cls._raw_conf = {
+            'global': {'foo': 'bar'},
+            'jobs': ['one', 'two']
+        }
+        assert self.cls._global_conf == {}
+        with patch('%s.Schema' % pbm, autospec=True) as m_schema:
+            self.cls._validate_config()
+        assert self.cls._global_conf == self.cls._raw_conf['global']
+        assert m_schema.mock_calls == [
+            call(),
+            call().validate(self.cls._raw_conf)
+        ]
 
 
 class TestMakeJobs(ConfigTester):

@@ -41,6 +41,7 @@ import yaml
 import boto3
 
 from ecsjobs.jobs import get_job_classes
+from ecsjobs.schema import Schema
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ class Config(object):
         self.s3 = boto3.resource('s3')
         self._raw_conf = {}
         self._global_conf = {}
-        self._jobs_conf = []
         self._jobs = []
         self._load_config()
         self._validate_config()
@@ -175,9 +175,10 @@ class Config(object):
     def _validate_config(self):
         """
         Validate the configuration in ``self._raw_conf``. Writes
-        ``self._global_conf`` and ``self._jobs_conf``.
+        ``self._global_conf``.
         """
-        logger.warning('WARNING - Config validation not implemented!')
+        Schema().validate(self._raw_conf)
+        self._global_conf = self._raw_conf['global']
 
     def _make_jobs(self):
         """
