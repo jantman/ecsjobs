@@ -35,6 +35,11 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+import abc
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Job(object):
     """
@@ -48,6 +53,8 @@ class Job(object):
 
     Plus whatever configuration items are required by subclasses.
     """
+
+    __metaclass__ = abc.ABCMeta
 
     _schema_dict = {
         'type': 'object',
@@ -117,3 +124,26 @@ class Job(object):
         :rtype: bool
         """
         return self._finished
+
+    @abc.abstractmethod
+    def run(self):
+        """
+        Run the job.
+
+        :return: True if job finished successfully, False if job finished but
+          failed, or None if the job is still running in the background.
+        """
+        raise NotImplementedError(
+            'ERROR: Job subclass must implement run() method.'
+        )
+
+    def poll(self):
+        """
+        For asynchronous jobs (:py:prop:`~.is_started` is True but
+        :py:prop:`~.is_finished` is False), check if the job has finished yet
+        and update :py:prop:`~.is_finished` accordingly.
+
+        :return: :py:prop:`~.is_finished`
+        :rtype: bool
+        """
+        return self.is_finished

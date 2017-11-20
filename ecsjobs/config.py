@@ -38,6 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import os
 import logging
 import glob
+from copy import copy
 
 import yaml
 import boto3
@@ -70,6 +71,16 @@ class Config(object):
         :rtype: list
         """
         return sorted(list(set([j.schedule_name for j in self._jobs.values()])))
+
+    @property
+    def jobs(self):
+        """
+        Return the list of :py:class:`ecsjobs.jobs.base.Job` instances.
+
+        :return: list of jobs
+        :rtype: list
+        """
+        return copy(self._jobs)
 
     def _load_config(self):
         """

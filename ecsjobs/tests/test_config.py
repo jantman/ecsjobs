@@ -93,6 +93,13 @@ class TestInit(object):
         assert mocks['_make_jobs'].mock_calls == [call(cls)]
 
 
+class TestJobs(ConfigTester):
+
+    def test_jobs(self):
+        self.cls._jobs = [1, 2, 3]
+        assert self.cls.jobs == [1, 2, 3]
+
+
 class TestKeyIsYaml(ConfigTester):
 
     def test_yml(self):
@@ -284,6 +291,90 @@ class TestLoadConfigLocal(ConfigTester):
             call(self.cls, '/conf/path/global.yml'),
             call(self.cls, '/conf/path/zzz.yaml')
         ]
+
+    def test_multi_file_trailing_slash(self):
+
+        def se_lyfd(klass, path):
+            return {'path': path}
+
+        assert self.cls._raw_conf == {}
+        with patch('%s._load_yaml_from_disk' % pb, autospec=True) as m_lyfd:
+            m_lyfd.side_effect = se_lyfd
+            with patch('%s.glob.glob' % pbm) as mock_glob:
+                mock_glob.side_effect = [
+                    ['/conf/path/foo.yml', '/conf/path/global.yml'],
+                    ['/conf/path/bar.yaml', '/conf/path/zzz.yaml']
+                ]
+                with patch('%s.os.path.exists' % pbm) as mock_ope:
+                    mock_ope.return_value = True
+                    with patch('%s.os.path.isdir' % pbm) as mock_opid:
+                        mock_opid.return_value = True
+                        self.cls._load_config_local('/conf/path/')
+        assert self.cls._raw_conf == {
+            'global': {'path': '/conf/path/global.yml'},
+            'jobs': [
+                {'path': '/conf/path/bar.yaml'},
+                {'path': '/conf/path/foo.yml'},
+                {'path': '/conf/path/zzz.yaml'}
+            ]
+        }
+        assert mock_ope.mock_calls == [call('/conf/path/')]
+        assert mock_opid.mock_calls == [call('/conf/path/')]
+        assert mock_glob.mock_calls == [
+            call('/conf/path/*.yml'),
+            call('/conf/path/*.yaml'),
+        ]
+        assert m_lyfd.mock_calls == [
+            call(self.cls, '/conf/path/bar.yaml'),
+            call(self.cls, '/conf/path/foo.yml'),
+            call(self.cls, '/conf/path/global.yml'),
+            call(self.cls, '/conf/path/zzz.yaml')
+        ]
+
+    def test_single_file(self):
+
+        def se_lyfd(klass, path):
+            return {'path': path}
+
+        assert self.cls._raw_conf == {}
+        with patch('%s._load_yaml_from_disk' % pb, autospec=True) as m_lyfd:
+            m_lyfd.side_effect = se_lyfd
+            with patch('%s.glob.glob' % pbm) as mock_glob:
+                with patch('%s.os.path.exists' % pbm) as mock_ope:
+                    mock_ope.return_value = True
+                    with patch('%s.os.path.isdir' % pbm) as mock_opid:
+                        mock_opid.return_value = False
+                        self.cls._load_config_local('/conf/path')
+        assert self.cls._raw_conf == {
+            'path': '/conf/path'
+        }
+        assert mock_ope.mock_calls == [call('/conf/path')]
+        assert mock_opid.mock_calls == [call('/conf/path')]
+        assert mock_glob.mock_calls == []
+        assert m_lyfd.mock_calls == [
+            call(self.cls, '/conf/path')
+        ]
+
+    def test_path_does_not_exist(self):
+
+        def se_lyfd(klass, path):
+            return {'path': path}
+
+        assert self.cls._raw_conf == {}
+        with patch('%s._load_yaml_from_disk' % pb, autospec=True) as m_lyfd:
+            m_lyfd.side_effect = se_lyfd
+            with patch('%s.glob.glob' % pbm) as mock_glob:
+                with patch('%s.os.path.exists' % pbm) as mock_ope:
+                    mock_ope.return_value = False
+                    with patch('%s.os.path.isdir' % pbm) as mock_opid:
+                        mock_opid.return_value = False
+                        with pytest.raises(RuntimeError) as exc:
+                            self.cls._load_config_local('/conf/path')
+        assert str(exc.value) == 'ERROR: Config path does not exist: /conf/path'
+        assert mock_ope.mock_calls == [call('/conf/path')]
+        assert mock_opid.mock_calls == []
+        assert mock_glob.mock_calls == []
+        assert m_lyfd.mock_calls == []
 
 
 class TestGetMultipartConfig(ConfigTester):

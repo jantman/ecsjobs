@@ -35,6 +35,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+import pytest
 from ecsjobs.jobs.base import Job
 
 
@@ -63,3 +64,11 @@ class TestBaseJob(object):
     def test_is_finished(self):
         self.cls._finished = 7
         assert self.cls.is_finished == 7
+
+    def test_run(self):
+        with pytest.raises(NotImplementedError):
+            self.cls.run()
+
+    def test_poll(self):
+        self.cls._finished = 6
+        assert self.cls.poll() == 6

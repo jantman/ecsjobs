@@ -35,7 +35,11 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+import abc  # noqa
 from ecsjobs.jobs.base import Job
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DockerExec(Job):
