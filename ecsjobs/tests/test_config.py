@@ -35,7 +35,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-from unittest.mock import patch, call, Mock, DEFAULT, PropertyMock, MagicMock  # noqa
+from unittest.mock import patch, call, Mock, DEFAULT, mock_open
 
 import pytest
 
@@ -59,7 +59,7 @@ class ConfigTester(object):
                     _validate_config=DEFAULT,
                     _make_jobs=DEFAULT
                 ):
-                    self.cls = Config('bname', 'kname')
+                    self.cls = Config()
         self.mock_s3.reset_mock()
 
 
@@ -79,17 +79,12 @@ class TestInit(object):
                     _validate_config=DEFAULT,
                     _make_jobs=DEFAULT
                 ) as mocks:
-                    cls = Config('bname', 'kname')
-        assert cls._bucket_name == 'bname'
-        assert cls._key_name == 'kname'
+                    cls = Config()
         assert cls.s3 == m_s3
         assert cls._global_conf == {}
         assert cls._jobs == []
         assert cls._raw_conf == {}
-        assert mock_logger.mock_calls == [
-            call.debug('Initializing Config using bucket_name=%s key_name=%s',
-                       'bname', 'kname')
-        ]
+        assert mock_logger.mock_calls == []
         assert mock_s3.mock_calls == [
             call('s3')
         ]
@@ -112,6 +107,84 @@ class TestKeyIsYaml(ConfigTester):
 
 class TestLoadConfig(ConfigTester):
 
+    def test_s3(self):
+        with patch.dict(
+            '%s.os.environ' % pbm,
+            {
+                'ECSJOBS_BUCKET': 'bname',
+                'ECSJOBS_KEY': 'kname'
+            },
+            clear=True
+        ):
+            with patch.multiple(
+                pb,
+                autospec=True,
+                _load_config_s3=DEFAULT,
+                _load_config_local=DEFAULT
+            ) as mocks:
+                self.cls._load_config()
+        assert mocks['_load_config_s3'].mock_calls == [
+            call(self.cls, 'bname', 'kname')
+        ]
+        assert mocks['_load_config_local'].mock_calls == []
+
+    def test_local(self):
+        with patch.dict(
+            '%s.os.environ' % pbm,
+            {
+                'ECSJOBS_LOCAL_CONF_PATH': '/conf/path'
+            },
+            clear=True
+        ):
+            with patch.multiple(
+                pb,
+                autospec=True,
+                _load_config_s3=DEFAULT,
+                _load_config_local=DEFAULT
+            ) as mocks:
+                self.cls._load_config()
+        assert mocks['_load_config_s3'].mock_calls == []
+        assert mocks['_load_config_local'].mock_calls == [
+            call(self.cls, '/conf/path')
+        ]
+
+    def test_failure(self):
+        with patch.dict('%s.os.environ' % pbm, {}, clear=True):
+            with patch.multiple(
+                pb,
+                autospec=True,
+                _load_config_s3=DEFAULT,
+                _load_config_local=DEFAULT
+            ) as mocks:
+                with pytest.raises(RuntimeError) as exc:
+                    self.cls._load_config()
+        assert str(exc.value) == 'ERROR: You must export either ' \
+                                 'ECSJOBS_BUCKET and ECSJOBS_KEY, ' \
+                                 'or ECSJOBS_LOCAL_CONF_PATH'
+        assert mocks['_load_config_s3'].mock_calls == []
+        assert mocks['_load_config_local'].mock_calls == []
+
+
+class TestLoadYamlFromDisk(ConfigTester):
+
+    def test_load_from_disk(self):
+        content = "foo: bar\nbaz: blam\n"
+        with patch(
+            '%s.open' % pbm, mock_open(read_data=content), create=True
+        ) as m:
+            res = self.cls._load_yaml_from_disk('/foo/bar.yml')
+        assert res == {'foo': 'bar', 'baz': 'blam'}
+        assert m.mock_calls == [
+            call('/foo/bar.yml', 'r'),
+            call().__enter__(),
+            call().read(4096),
+            call().read(4096),
+            call().__exit__(None, None, None)
+        ]
+
+
+class TestLoadConfigS3(ConfigTester):
+
     def test_single_file(self):
         self.cls._key_name = 'foo/bar/config.yml'
         assert self.cls._raw_conf == {}
@@ -124,7 +197,7 @@ class TestLoadConfig(ConfigTester):
         ) as mocks:
             mocks['_get_yaml_from_s3'].return_value = {'my': 'config'}
             mocks['_key_is_yaml'].return_value = True
-            self.cls._load_config()
+            self.cls._load_config_s3('bname', 'foo/bar/config.yml')
         assert self.cls._raw_conf == {'my': 'config'}
         assert self.mock_s3.mock_calls == [
             call().Bucket('bname')
@@ -153,7 +226,7 @@ class TestLoadConfig(ConfigTester):
         ) as mocks:
             mocks['_get_multipart_config'].return_value = {'my': 'config'}
             mocks['_key_is_yaml'].return_value = False
-            self.cls._load_config()
+            self.cls._load_config_s3('bname', 'foo/bar/config')
         assert self.cls._raw_conf == {'my': 'config'}
         assert self.mock_s3.mock_calls == [
             call().Bucket('bname')
@@ -168,6 +241,48 @@ class TestLoadConfig(ConfigTester):
         ]
         assert mocks['_key_is_yaml'].mock_calls == [
             call(self.cls, 'foo/bar/config')
+        ]
+
+
+class TestLoadConfigLocal(ConfigTester):
+
+    def test_multi_file(self):
+
+        def se_lyfd(klass, path):
+            return {'path': path}
+
+        assert self.cls._raw_conf == {}
+        with patch('%s._load_yaml_from_disk' % pb, autospec=True) as m_lyfd:
+            m_lyfd.side_effect = se_lyfd
+            with patch('%s.glob.glob' % pbm) as mock_glob:
+                mock_glob.side_effect = [
+                    ['/conf/path/foo.yml', '/conf/path/global.yml'],
+                    ['/conf/path/bar.yaml', '/conf/path/zzz.yaml']
+                ]
+                with patch('%s.os.path.exists' % pbm) as mock_ope:
+                    mock_ope.return_value = True
+                    with patch('%s.os.path.isdir' % pbm) as mock_opid:
+                        mock_opid.return_value = True
+                        self.cls._load_config_local('/conf/path')
+        assert self.cls._raw_conf == {
+            'global': {'path': '/conf/path/global.yml'},
+            'jobs': [
+                {'path': '/conf/path/bar.yaml'},
+                {'path': '/conf/path/foo.yml'},
+                {'path': '/conf/path/zzz.yaml'}
+            ]
+        }
+        assert mock_ope.mock_calls == [call('/conf/path')]
+        assert mock_opid.mock_calls == [call('/conf/path')]
+        assert mock_glob.mock_calls == [
+            call('/conf/path/*.yml'),
+            call('/conf/path/*.yaml'),
+        ]
+        assert m_lyfd.mock_calls == [
+            call(self.cls, '/conf/path/bar.yaml'),
+            call(self.cls, '/conf/path/foo.yml'),
+            call(self.cls, '/conf/path/global.yml'),
+            call(self.cls, '/conf/path/zzz.yaml')
         ]
 
 

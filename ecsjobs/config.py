@@ -35,7 +35,9 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+import os
 import logging
+import glob
 
 import yaml
 import boto3
@@ -50,11 +52,7 @@ class Config(object):
 
     YAML_EXTNS = ['.yml', '.yaml']
 
-    def __init__(self, bucket_name, key_name):
-        logger.debug('Initializing Config using bucket_name=%s key_name=%s',
-                     bucket_name, key_name)
-        self._bucket_name = bucket_name
-        self._key_name = key_name
+    def __init__(self):
         self.s3 = boto3.resource('s3')
         self._raw_conf = {}
         self._global_conf = {}
@@ -75,19 +73,89 @@ class Config(object):
 
     def _load_config(self):
         """
-        Retrieve and load configuration from S3. Sets ``self._raw_conf``.
+        Check environment variables; call either :py:meth:`~._load_config_s3`
+        or :py:meth:`~._load_config_local`.
+
+        :raises: RuntimeError
         """
-        logger.debug('Loading configuration from %s', self._bucket_name)
-        bkt = self.s3.Bucket(self._bucket_name)
-        if self._key_is_yaml(self._key_name):
+        if 'ECSJOBS_BUCKET' in os.environ and 'ECSJOBS_KEY' in os.environ:
+
+            self._load_config_s3(
+                os.environ['ECSJOBS_BUCKET'],
+                os.environ['ECSJOBS_KEY']
+            )
+        elif 'ECSJOBS_LOCAL_CONF_PATH' in os.environ:
+            self._load_config_local(os.environ['ECSJOBS_LOCAL_CONF_PATH'])
+        else:
+            raise RuntimeError(
+                'ERROR: You must export either ECSJOBS_BUCKET and ECSJOBS_KEY, '
+                'or ECSJOBS_LOCAL_CONF_PATH'
+            )
+
+    def _load_config_s3(self, bucket_name, key_name):
+        """
+        Retrieve and load configuration from S3. Sets ``self._raw_conf``.
+
+        :param bucket_name: Name of the S3 bucket to retrieve config from
+        :type bucket_name: str
+        :param key_name: config key or prefix in bucket
+        :type key_name: str
+        """
+        logger.debug('Loading configuration from bucket %s key/prefix %s',
+                     bucket_name, key_name)
+        bkt = self.s3.Bucket(bucket_name)
+        if self._key_is_yaml(key_name):
             logger.info('Loading configuration from single file %s in %s',
-                        self._key_name, self._bucket_name)
-            self._raw_conf = self._get_yaml_from_s3(bkt, self._key_name)
+                        key_name, bucket_name)
+            self._raw_conf = self._get_yaml_from_s3(bkt, key_name)
         else:
             logger.info('Loading multi-file configuration from prefix %s in '
-                        'bucket %s', self._key_name, self._bucket_name)
-            self._raw_conf = self._get_multipart_config(bkt, self._key_name)
+                        'bucket %s', key_name, bucket_name)
+            self._raw_conf = self._get_multipart_config(bkt, key_name)
         logger.debug('Configuration load complete:\n%s', self._raw_conf)
+
+    def _load_config_local(self, conf_path):
+        """
+        Load configuration from the local filesystem. Sets ``self._raw_conf``.
+
+        :param conf_path: path to configuration on local FS
+        :type conf_path: str
+        """
+        logger.debug(
+            'Loading configuration from local filesystem: %s', conf_path
+        )
+        if not os.path.exists(conf_path):
+            raise RuntimeError(
+                'ERROR: Config path does not exist: %s' % conf_path
+            )
+        if not os.path.isdir(conf_path):
+            self._raw_conf = self._load_yaml_from_disk(conf_path)
+            return
+        # else it's a directory; load recursively
+        if not conf_path.endswith('/'):
+            conf_path += '/'
+        files = []
+        for ext in self.YAML_EXTNS:
+            files.extend(glob.glob('%s*%s' % (conf_path, ext)))
+        res = {'global': {}, 'jobs': []}
+        for f in sorted(files):
+            if os.path.basename(f) in ['global%s' % e for e in self.YAML_EXTNS]:
+                res['global'] = self._load_yaml_from_disk(f)
+            else:
+                res['jobs'].append(self._load_yaml_from_disk(f))
+        self._raw_conf = res
+
+    def _load_yaml_from_disk(self, path):
+        """
+        Load a YAML file from disk and return the contents.
+
+        :param path: path to load from
+        :type path: str
+        :return: deserialized YAML file contents
+        :rtype: dict
+        """
+        with open(path, 'r') as fh:
+            return yaml.load(fh)
 
     def _key_is_yaml(self, key):
         """

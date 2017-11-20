@@ -156,73 +156,12 @@ class TestMain(object):
             EcsJobsRunner=DEFAULT
         ) as mocks:
             mocks['parse_args'].side_effect = SystemExit(0)
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_BUCKET': 'bname', 'ECSJOBS_KEY': 'keyname'},
-                clear=True
-            ):
-                with patch('%s.sys.argv' % pbm, ['foo', '-V']):
-                    with pytest.raises(SystemExit):
-                        main()
+            with patch('%s.sys.argv' % pbm, ['foo', '-V']):
+                with pytest.raises(SystemExit):
+                    main()
         assert mocks['logger'].mock_calls == []
         assert mocks['parse_args'].mock_calls == [call(['-V'])]
         assert mocks['set_log_debug'].mock_calls == []
-        assert mocks['set_log_info'].mock_calls == []
-        assert mocks['Config'].mock_calls == []
-        assert mocks['EcsJobsRunner'].mock_calls == []
-
-    def test_info_no_bucket(self):
-        with patch.multiple(
-            pbm,
-            autospec=True,
-            logger=DEFAULT,
-            parse_args=DEFAULT,
-            set_log_debug=DEFAULT,
-            set_log_info=DEFAULT,
-            Config=DEFAULT,
-            EcsJobsRunner=DEFAULT
-        ) as mocks:
-            mocks['parse_args'].return_value = MockArgs(verbose=1)
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_KEY': 'keyname'},
-                clear=True
-            ):
-                with pytest.raises(RuntimeError) as exc:
-                    main(['foo'])
-        assert str(exc.value) == 'ERROR: You must set "ECSJOBS_BUCKET" ' \
-                                 'environment variable.'
-        assert mocks['logger'].mock_calls == []
-        assert mocks['parse_args'].mock_calls == [call(['foo'])]
-        assert mocks['set_log_debug'].mock_calls == []
-        assert mocks['set_log_info'].mock_calls == [call(logging.getLogger())]
-        assert mocks['Config'].mock_calls == []
-        assert mocks['EcsJobsRunner'].mock_calls == []
-
-    def test_debug_no_key(self):
-        with patch.multiple(
-            pbm,
-            autospec=True,
-            logger=DEFAULT,
-            parse_args=DEFAULT,
-            set_log_debug=DEFAULT,
-            set_log_info=DEFAULT,
-            Config=DEFAULT,
-            EcsJobsRunner=DEFAULT
-        ) as mocks:
-            mocks['parse_args'].return_value = MockArgs(verbose=2, ACTION='run')
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_BUCKET': 'bname'},
-                clear=True
-            ):
-                with pytest.raises(RuntimeError) as exc:
-                    main(['foo'])
-        assert str(exc.value) == 'ERROR: You must set "ECSJOBS_KEY" ' \
-                                 'environment variable.'
-        assert mocks['logger'].mock_calls == []
-        assert mocks['parse_args'].mock_calls == [call(['foo'])]
-        assert mocks['set_log_debug'].mock_calls == [call(logging.getLogger())]
         assert mocks['set_log_info'].mock_calls == []
         assert mocks['Config'].mock_calls == []
         assert mocks['EcsJobsRunner'].mock_calls == []
@@ -238,22 +177,17 @@ class TestMain(object):
             Config=DEFAULT,
             EcsJobsRunner=DEFAULT
         ) as mocks:
-            mocks['parse_args'].return_value = MockArgs(ACTION='validate')
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_BUCKET': 'bname', 'ECSJOBS_KEY': 'keyname'},
-                clear=True
-            ):
-                with pytest.raises(SystemExit) as exc:
-                    main(['validate'])
+            mocks['parse_args'].return_value = MockArgs(
+                ACTION='validate', verbose=2
+            )
+            with pytest.raises(SystemExit) as exc:
+                main(['validate'])
         assert exc.value.code == 0
         assert mocks['logger'].mock_calls == []
         assert mocks['parse_args'].mock_calls == [call(['validate'])]
-        assert mocks['set_log_debug'].mock_calls == []
+        assert mocks['set_log_debug'].mock_calls == [call(logging.getLogger())]
         assert mocks['set_log_info'].mock_calls == []
-        assert mocks['Config'].mock_calls == [
-            call('bname', 'keyname')
-        ]
+        assert mocks['Config'].mock_calls == [call()]
         assert mocks['EcsJobsRunner'].mock_calls == []
 
     def test_list_schedules(self, capsys):
@@ -270,21 +204,14 @@ class TestMain(object):
             mocks['parse_args'].return_value = MockArgs(ACTION='list-schedules')
             type(mocks['Config'].return_value).schedule_names = \
                 PropertyMock(return_value=['foo', 'bar', 'baz'])
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_BUCKET': 'bname', 'ECSJOBS_KEY': 'keyname'},
-                clear=True
-            ):
-                with pytest.raises(SystemExit) as exc:
-                    main(['list-schedules'])
+            with pytest.raises(SystemExit) as exc:
+                main(['list-schedules'])
         assert exc.value.code == 0
         assert mocks['logger'].mock_calls == []
         assert mocks['parse_args'].mock_calls == [call(['list-schedules'])]
         assert mocks['set_log_debug'].mock_calls == []
         assert mocks['set_log_info'].mock_calls == []
-        assert mocks['Config'].mock_calls == [
-            call('bname', 'keyname')
-        ]
+        assert mocks['Config'].mock_calls == [call()]
         assert mocks['EcsJobsRunner'].mock_calls == []
         out, err = capsys.readouterr()
         assert err == ''
@@ -302,21 +229,14 @@ class TestMain(object):
             EcsJobsRunner=DEFAULT
         ) as mocks:
             mocks['parse_args'].return_value = MockArgs(
-                ACTION='run', SCHEDULES=['foo', 'baz']
+                ACTION='run', SCHEDULES=['foo', 'baz'], verbose=1
             )
-            with patch.dict(
-                '%s.os.environ' % pbm,
-                {'ECSJOBS_BUCKET': 'bname', 'ECSJOBS_KEY': 'keyname'},
-                clear=True
-            ):
-                main(['run', 'foo', 'baz'])
+            main(['run', 'foo', 'baz'])
         assert mocks['logger'].mock_calls == []
         assert mocks['parse_args'].mock_calls == [call(['run', 'foo', 'baz'])]
         assert mocks['set_log_debug'].mock_calls == []
-        assert mocks['set_log_info'].mock_calls == []
-        assert mocks['Config'].mock_calls == [
-            call('bname', 'keyname')
-        ]
+        assert mocks['set_log_info'].mock_calls == [call(logging.getLogger())]
+        assert mocks['Config'].mock_calls == [call()]
         assert mocks['EcsJobsRunner'].mock_calls == [
             call(mocks['Config'].return_value),
             call().run_schedules(['foo', 'baz'])

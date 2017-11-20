@@ -36,7 +36,6 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 import sys
-import os
 import argparse
 import logging
 
@@ -139,15 +138,7 @@ def main(argv=None):
     elif args.verbose == 1:
         set_log_info(logger)
 
-    if 'ECSJOBS_BUCKET' not in os.environ:
-        raise RuntimeError(
-            'ERROR: You must set "ECSJOBS_BUCKET" environment variable.'
-        )
-    if 'ECSJOBS_KEY' not in os.environ:
-        raise RuntimeError(
-            'ERROR: You must set "ECSJOBS_KEY" environment variable.'
-        )
-    conf = Config(os.environ['ECSJOBS_BUCKET'], os.environ['ECSJOBS_KEY'])
+    conf = Config()
     if args.ACTION == 'validate':
         # this was done when loading the config
         raise SystemExit(0)
