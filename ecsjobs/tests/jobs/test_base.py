@@ -50,6 +50,8 @@ class TestBaseJob(object):
         assert cls._schedule_name == 'schedname'
         assert cls._started is False
         assert cls._finished is False
+        assert cls._exit_code == -1
+        assert cls._output is None
 
     def test_name(self):
         assert self.cls.name == 'jname'
@@ -72,3 +74,11 @@ class TestBaseJob(object):
     def test_poll(self):
         self.cls._finished = 6
         assert self.cls.poll() == 6
+
+    def test_exit_code(self):
+        self.cls._exit_code = 23
+        assert self.cls.exitcode == 23
+
+    def test_output(self):
+        self.cls._output = 'foo'
+        assert self.cls.output == 'foo'

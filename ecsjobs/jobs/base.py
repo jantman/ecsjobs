@@ -84,6 +84,8 @@ class Job(object):
         self._schedule_name = schedule
         self._started = False
         self._finished = False
+        self._exit_code = -1
+        self._output = None
 
     @property
     def name(self):
@@ -125,10 +127,38 @@ class Job(object):
         """
         return self._finished
 
+    @property
+    def exitcode(self):
+        """
+        For Job subclasses that result in a command exit code, return the
+        integer exitcode. For Job subclasses that result in a boolean (success /
+        failure) status, return 0 on success or 1 on failure. Returns -1 if the
+        Job has not completed.
+
+        :return: Job exit code or (0 / 1) status
+        :rtype: int
+        """
+        return self._exit_code
+
+    @property
+    def output(self):
+        """
+        Return the output of the Job as a string, or None if the job has not
+        completed.
+
+        :return: Job output
+        :rtype: str
+        """
+        return self._output
+
     @abc.abstractmethod
     def run(self):
         """
         Run the job.
+
+        This method sets ``self._started``. If the Job runs synchronously, this
+        method also sets ``self._finished``, ``self._exit_code`` and
+        ``self._output``.
 
         :return: True if job finished successfully, False if job finished but
           failed, or None if the job is still running in the background.

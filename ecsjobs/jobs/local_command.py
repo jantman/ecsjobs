@@ -35,15 +35,44 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+import abc  # noqa
 from ecsjobs.jobs.base import Job
+import logging
+import subprocess
+
+logger = logging.getLogger(__name__)
 
 
 class LocalCommand(Job):
+    """
+    Job class to run a local command via :py:func:`subprocess.run`. The
+    :py:prop:`~.output` property of this class contains combined STDOUT and
+    STDERR. If the ``timeout`` configuration option is set,
+    :py:prop:`~.exitcode` will be set to -2 if a timeout occurs.
+    """
 
     _schema_dict = {
         'type': 'object',
         'properties': {
-            'command': {'type': 'string'}
+            'command': {
+                'oneOf': [
+                    {'type': 'string'},
+                    {
+                        'type': 'array',
+                        'items': [
+                            {'type': 'string'}
+                        ],
+                        'additionalItems': False
+                    }
+                ]
+            },
+            'shell': {'type': 'boolean'},
+            'timeout': {
+                'oneOf': [
+                    {'type': 'integer'},
+                    {'type': 'null'}
+                ]
+            }
         },
         'required': [
             'command'
@@ -51,4 +80,51 @@ class LocalCommand(Job):
     }
 
     def __init__(self, name, schedule, **kwargs):
+        """
+        Initialize a LocalCommand object.
+
+        :param name: unique name for this job
+        :type name: str
+        :param schedule: the name of the schedule this job runs on
+        :type schedule: str
+        :param kwargs: keyword arguments; see :py:attr:`~._schema_dict`
+        :type kwargs: dict
+        """
         super(LocalCommand, self).__init__(name, schedule)
+        # defaults for configuration
+        conf = {
+            'shell': False,
+            'timeout': None
+        }
+        conf.update(kwargs)
+        self._command = kwargs['command']
+        self._use_shell = kwargs['shell']
+        self._timeout = kwargs['timeout']
+
+    def run(self):
+        """
+        Run the job.
+
+        This method sets ``self._started``, ``self._finished``,
+        ``self._exit_code`` and ``self._output``.
+
+        :return: True if command exited 0, False otherwise.
+        """
+        try:
+            self._started = True
+            s = subprocess.run(
+                self._command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=self._use_shell,
+                timeout=self._timeout
+            )
+            self._finished = True
+        except subprocess.TimeoutExpired as exc:
+            self._finished = True
+            logger.warning('LocalCommand %s timed out after %s seconds',
+                           self.name, exc.timeout)
+            self._exit_code = -2
+            self._output = exc.output.decode()
+        self._exit_code = s.returncode
+        self._output = s.stdout.decode()
