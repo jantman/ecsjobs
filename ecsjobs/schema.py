@@ -78,7 +78,9 @@ class Schema(object):
                             'type': 'string',
                             'format': 'email'
                         }
-                    }
+                    },
+                    'inter_poll_sleep_sec': {'type': 'integer'},
+                    'max_total_runtime_sec': {'type': 'integer'}
                 }
             }
         }

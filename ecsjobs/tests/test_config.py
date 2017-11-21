@@ -528,19 +528,33 @@ class TestGetYamlFromS3(ConfigTester):
 class TestScheduleNames(ConfigTester):
 
     def test_schedule_names(self):
-        self.cls._jobs = {
-            'foo': Mock(schedule_name='foo'),
-            'bar': Mock(schedule_name='bar'),
-            'baz': Mock(schedule_name='foo'),
-            'blam': Mock(schedule_name='blam'),
-        }
+        self.cls._jobs = [
+            Mock(schedule_name='foo'),
+            Mock(schedule_name='bar'),
+            Mock(schedule_name='foo'),
+            Mock(schedule_name='blam'),
+        ]
         assert self.cls.schedule_names == ['bar', 'blam', 'foo']
+
+
+class TestJobsForSchedule(ConfigTester):
+
+    def test_jobs_for_schedules(self):
+        j1 = FakeJob(schedule_name='foo')
+        j2 = FakeJob(schedule_name='bar')
+        j3 = FakeJob(schedule_name='baz')
+        j4 = FakeJob(schedule_name='blam')
+        j5 = FakeJob(schedule_name='bar')
+        self.cls._jobs = [j1, j2, j3, j4, j5]
+        assert self.cls.jobs_for_schedules(['bar', 'quux']) == [j2, j5]
 
 
 class FakeJob(object):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
+        if 'schedule_name' in kwargs:
+            self.schedule_name = kwargs['schedule_name']
 
 
 class TestValidate(ConfigTester):
@@ -607,3 +621,14 @@ class TestMakeJobs(ConfigTester):
         assert self.cls._jobs[1].kwargs == {
             'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'
         }
+
+
+class TestGetGlobal(ConfigTester):
+
+    def test_get_in_conf(self):
+        self.cls._global_conf = {'foo': 'bar'}
+        assert self.cls._global_conf.get('foo') == 'bar'
+        assert self.cls.get_global('foo') == 'bar'
+
+    def test_get_defaults(self):
+        assert self.cls.get_global('inter_poll_sleep_sec') == 10

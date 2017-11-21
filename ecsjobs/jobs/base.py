@@ -37,6 +37,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 import abc
 import logging
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,8 @@ class Job(object):
         ]
     }
 
+    _defaults = {}
+
     def __init__(self, name, schedule, **kwargs):
         """
         Initialize a Job object.
@@ -86,6 +89,28 @@ class Job(object):
         self._finished = False
         self._exit_code = -1
         self._output = None
+        self._start_time = None
+        self._finish_time = None
+        self._config = deepcopy(self._defaults)
+        self._config.update(kwargs)
+
+    def __repr__(self):
+        return '<%s name="%s">' % (type(self).__name__, self.name)
+
+    @property
+    def error_repr(self):
+        """
+        Return a detailed representation of the job state for use in error
+        reporting.
+
+        :return: detailed representation of job in case of error
+        :rtype: str
+        """
+        return "%s\nSchedule Name: %s\nStarted: %s\nFinished: %s\n" \
+               "Exit Code: %s\nOutput: %s\n" % (
+                   self.__repr__(), self._schedule_name, self._started,
+                   self._finished, self._exit_code, self._output
+               )
 
     @property
     def name(self):
@@ -156,9 +181,9 @@ class Job(object):
         """
         Run the job.
 
-        This method sets ``self._started``. If the Job runs synchronously, this
-        method also sets ``self._finished``, ``self._exit_code`` and
-        ``self._output``.
+        This method sets ``self._started`` and ``self._start_time``. If the Job
+        runs synchronously, this method also sets ``self._finished``,
+        ``self._exit_code``, ``self._finish_time`` and ``self._output``.
 
         :return: True if job finished successfully, False if job finished but
           failed, or None if the job is still running in the background.
@@ -170,8 +195,10 @@ class Job(object):
     def poll(self):
         """
         For asynchronous jobs (:py:prop:`~.is_started` is True but
-        :py:prop:`~.is_finished` is False), check if the job has finished yet
-        and update :py:prop:`~.is_finished` accordingly.
+        :py:prop:`~.is_finished` is False), check if the job has finished yet.
+        If not, return :py:prop:`~.is_finished`. If the job has finished, update
+        ``self._finish_time``, ``self._exit_code``, ``self._output`` and
+        ``self._finished`` and then return :py:prop:`~.is_finished`.
 
         :return: :py:prop:`~.is_finished`
         :rtype: bool

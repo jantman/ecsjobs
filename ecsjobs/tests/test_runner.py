@@ -37,15 +37,19 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 import logging
 import pytest
-
+from datetime import datetime
 from unittest.mock import patch, call, Mock, DEFAULT, PropertyMock
 
+from freezegun import freeze_time
+
 from ecsjobs.runner import (
-    set_log_debug, set_log_info, set_log_level_format, parse_args, main
+    set_log_debug, set_log_info, set_log_level_format, parse_args, main,
+    EcsJobsRunner
 )
 from ecsjobs.version import VERSION, PROJECT_URL
 
 pbm = 'ecsjobs.runner'
+pb = '%s.EcsJobsRunner' % pbm
 
 
 class MockArgs(object):
@@ -241,3 +245,148 @@ class TestMain(object):
             call(mocks['Config'].return_value),
             call().run_schedules(['foo', 'baz'])
         ]
+
+
+class TestEcsJobsRunner(object):
+
+    def setup(self):
+        self.config = Mock()
+        self.cls = EcsJobsRunner(self.config)
+
+    def test_init(self):
+        cls = EcsJobsRunner(self.config)
+        assert cls._conf == self.config
+        assert cls._finished == []
+        assert cls._running == []
+        assert cls._run_exceptions == {}
+        assert cls._start_time is None
+        assert cls._timeout is None
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_run_schedules(self):
+        j1 = Mock(name='job1')
+        j1.run.return_value = True
+        j2 = Mock(name='job2')
+        j2.run.return_value = None
+        j3 = Mock(name='job3')
+        j3.run.return_value = False
+        j4 = Mock(name='job4')
+        type(j4).error_repr = PropertyMock(return_value='j4erepr')
+        exc = RuntimeError('foo')
+        j4.run.side_effect = exc
+        self.config.jobs_for_schedules.return_value = [j1, j2, j3, j4]
+        self.config.get_global.return_value = 3600
+        self.cls._finished = ['a']
+        self.cls._running = ['b']
+        self.cls._run_exceptions['foo'] = 6
+        with patch('%s._poll_jobs' % pb, autospec=True) as mock_poll:
+            with patch('%s._report' % pb, autospec=True) as mock_report:
+                self.cls.run_schedules(['foo', 'bar'])
+        assert self.cls._finished == [j1, j3, j4]
+        assert self.cls._running == [j2]
+        assert self.cls._run_exceptions == {j4: exc}
+        assert mock_poll.mock_calls == [call(self.cls)]
+        assert mock_report.mock_calls == [call(self.cls)]
+        assert self.config.jobs_for_schedules.mock_calls == [
+            call(['foo', 'bar'])
+        ]
+        assert j1.mock_calls == [call.run()]
+        assert j2.mock_calls == [call.run()]
+        assert j3.mock_calls == [call.run()]
+        assert j4.mock_calls == [call.run()]
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_run_schedules_timeout(self):
+
+        def se_run():
+            self.cls._timeout = datetime(2017, 10, 20, 12, 20, 00)
+            return None
+
+        j1 = Mock(name='job1')
+        j1.run.return_value = True
+        j2 = Mock(name='job2')
+        j2.run.side_effect = se_run
+        j3 = Mock(name='job3')
+        j3.run.return_value = False
+        j4 = Mock(name='job4')
+        type(j4).error_repr = PropertyMock(return_value='j4erepr')
+        exc = RuntimeError('foo')
+        j4.run.side_effect = exc
+        self.config.jobs_for_schedules.return_value = [j1, j2, j3, j4]
+        self.config.get_global.return_value = 3600
+        self.cls._finished = ['a']
+        self.cls._running = ['b']
+        self.cls._run_exceptions['foo'] = 6
+        with patch('%s._poll_jobs' % pb, autospec=True) as mock_poll:
+            with patch('%s._report' % pb, autospec=True) as mock_report:
+                with patch('%s.logger' % pbm) as mock_logger:
+                    self.cls.run_schedules(['foo', 'bar'])
+        assert self.cls._finished == [j1]
+        assert self.cls._running == [j2]
+        assert self.cls._run_exceptions == {}
+        assert mock_poll.mock_calls == [call(self.cls)]
+        assert mock_report.mock_calls == [call(self.cls)]
+        assert self.config.jobs_for_schedules.mock_calls == [
+            call(['foo', 'bar'])
+        ]
+        assert j1.mock_calls == [call.run()]
+        assert j2.mock_calls == [call.run()]
+        assert j3.mock_calls == []
+        assert j4.mock_calls == []
+        assert call.error(
+            'Time limit reached; not running any more jobs!'
+        ) in mock_logger.mock_calls
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_poll_jobs(self):
+        self.config.get_global.return_value = 3600
+        self.cls._timeout = datetime(2017, 10, 20, 13, 30, 00)
+        j1 = Mock(name='job1')
+        j1.poll.return_value = True
+        j2 = Mock(name='job2')
+        j2.poll.side_effect = [False, False, True]
+        j3 = Mock(name='job3')
+        j3.poll.return_value = True
+        self.cls._running = [j1, j2, j3]
+        self.cls._finished = []
+        with patch('%s.sleep' % pbm) as mock_sleep:
+            self.cls._poll_jobs()
+        assert self.cls._finished == [j1, j3, j2]
+        assert self.cls._running == []
+        assert j1.mock_calls == [call.poll()]
+        assert j2.mock_calls == [call.poll(), call.poll(), call.poll()]
+        assert j3.mock_calls == [call.poll()]
+        assert mock_sleep.mock_calls == [call(3600), call(3600)]
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_poll_jobs_timeout(self):
+        self.poll_num = 0
+
+        def se_poll():
+            if self.poll_num == 0:
+                self.poll_num = 1
+                return False
+            self.cls._timeout = datetime(2017, 10, 20, 12, 30, 00)
+
+        self.config.get_global.return_value = 3600
+        self.cls._timeout = datetime(2017, 10, 20, 13, 30, 00)
+        j1 = Mock(name='job1')
+        j1.poll.return_value = True
+        j2 = Mock(name='job2')
+        j2.poll.side_effect = se_poll
+        j3 = Mock(name='job3')
+        j3.poll.return_value = True
+        self.cls._running = [j1, j2, j3]
+        self.cls._finished = []
+        with patch('%s.sleep' % pbm) as mock_sleep:
+            with patch('%s.logger' % pbm) as mock_logger:
+                self.cls._poll_jobs()
+        assert self.cls._finished == [j1, j3]
+        assert self.cls._running == [j2]
+        assert j1.mock_calls == [call.poll()]
+        assert j2.mock_calls == [call.poll(), call.poll()]
+        assert j3.mock_calls == [call.poll()]
+        assert mock_sleep.mock_calls == [call(3600), call(3600)]
+        assert call.error(
+            'Time limit reached; not polling any more jobs!'
+        ) in mock_logger.mock_calls

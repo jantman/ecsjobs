@@ -4,12 +4,17 @@ global:
     - bar@example.com
     - baz@example.com
 jobs:
-- name: job1
-  class_name: EcsTask
+- name: bintrue
+  class_name: LocalCommand
   schedule: foo
-- name: job2
-  class_name: DockerExec
+  command: /bin/true
+- name: binfalse
+  class_name: LocalCommand
   schedule: foo
-- name: job3
-  class_name: EcsDockerExec
+  command: /bin/false
+- name: uptime
+  class_name: LocalCommand
   schedule: bar
+  command: /usr/bin/uptime
+  shell: true
+  timeout: 30

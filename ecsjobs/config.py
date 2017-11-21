@@ -51,7 +51,14 @@ logger = logging.getLogger(__name__)
 
 class Config(object):
 
+    #: File extensions to consider as YAML config files.
     YAML_EXTNS = ['.yml', '.yaml']
+
+    #: Default values for global configuration settings.
+    _global_defaults = {
+        'inter_poll_sleep_sec': 10,
+        'max_total_runtime_sec': 3600
+    }
 
     def __init__(self):
         self.s3 = boto3.resource('s3')
@@ -70,7 +77,19 @@ class Config(object):
         :return: all defined schedule names
         :rtype: list
         """
-        return sorted(list(set([j.schedule_name for j in self._jobs.values()])))
+        return sorted(list(set([j.schedule_name for j in self._jobs])))
+
+    def jobs_for_schedules(self, schedule_names):
+        """
+        Given one or more schedule names, return the list of jobs for those
+        schedules (in order).
+
+        :param schedule_names: schedule names to get jobs for
+        :type schedule_names: list
+        :return: list of Jobs for the specified schedules
+        :rtype: list
+        """
+        return [j for j in self.jobs if j.schedule_name in schedule_names]
 
     @property
     def jobs(self):
@@ -81,6 +100,19 @@ class Config(object):
         :rtype: list
         """
         return copy(self._jobs)
+
+    def get_global(self, k):
+        """
+        Return the value of the specified global configuration setting,
+        from the global configuration (if present) or else from the global
+        defaults.
+
+        :param k: configuration key to get
+        :return: value of global config setting
+        """
+        if k in self._global_conf:
+            return self._global_conf[k]
+        return self._global_defaults[k]
 
     def _load_config(self):
         """

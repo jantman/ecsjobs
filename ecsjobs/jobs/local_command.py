@@ -36,6 +36,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 import abc  # noqa
+from datetime import datetime
 from ecsjobs.jobs.base import Job
 import logging
 import subprocess
@@ -79,6 +80,11 @@ class LocalCommand(Job):
         ]
     }
 
+    _defaults = {
+        'shell': False,
+        'timeout': None
+    }
+
     def __init__(self, name, schedule, **kwargs):
         """
         Initialize a LocalCommand object.
@@ -90,41 +96,41 @@ class LocalCommand(Job):
         :param kwargs: keyword arguments; see :py:attr:`~._schema_dict`
         :type kwargs: dict
         """
-        super(LocalCommand, self).__init__(name, schedule)
-        # defaults for configuration
-        conf = {
-            'shell': False,
-            'timeout': None
-        }
-        conf.update(kwargs)
-        self._command = kwargs['command']
-        self._use_shell = kwargs['shell']
-        self._timeout = kwargs['timeout']
+        super(LocalCommand, self).__init__(name, schedule, **kwargs)
 
     def run(self):
         """
         Run the job.
 
         This method sets ``self._started``, ``self._finished``,
-        ``self._exit_code`` and ``self._output``.
+        ``self._start_time``, ``self._finish_time``, ``self._exit_code`` and
+        ``self._output``.
 
         :return: True if command exited 0, False otherwise.
         """
+        logger.debug('Job %s: Running command %s shell=%s timeout=%s',
+                     self.name, self._config['command'], self._config['shell'],
+                     self._config['timeout'])
         try:
             self._started = True
+            self._start_time = datetime.now()
             s = subprocess.run(
-                self._command,
+                self._config['command'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                shell=self._use_shell,
-                timeout=self._timeout
+                shell=self._config['shell'],
+                timeout=self._config['timeout']
             )
             self._finished = True
+            self._finish_time = datetime.now()
+            self._exit_code = s.returncode
+            self._output = s.stdout.decode()
+            logger.debug('Job %s: command finished.', self.name)
         except subprocess.TimeoutExpired as exc:
             self._finished = True
+            self._finish_time = datetime.now()
             logger.warning('LocalCommand %s timed out after %s seconds',
                            self.name, exc.timeout)
             self._exit_code = -2
             self._output = exc.output.decode()
-        self._exit_code = s.returncode
-        self._output = s.stdout.decode()
+        return self._exit_code == 0

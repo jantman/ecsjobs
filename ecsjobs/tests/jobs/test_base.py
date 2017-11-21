@@ -45,13 +45,16 @@ class TestBaseJob(object):
         self.cls = Job('jname', 'schedname')
 
     def test_init(self):
-        cls = Job('jname', 'schedname')
+        cls = Job('jname', 'schedname', foo='bar', baz='blam')
         assert cls._name == 'jname'
         assert cls._schedule_name == 'schedname'
         assert cls._started is False
         assert cls._finished is False
         assert cls._exit_code == -1
         assert cls._output is None
+        assert cls._start_time is None
+        assert cls._finish_time is None
+        assert cls._config == {'foo': 'bar', 'baz': 'blam'}
 
     def test_name(self):
         assert self.cls.name == 'jname'
@@ -82,3 +85,15 @@ class TestBaseJob(object):
     def test_output(self):
         self.cls._output = 'foo'
         assert self.cls.output == 'foo'
+
+    def test_repr(self):
+        assert self.cls.__repr__() == '<Job name="jname">'
+
+    def test_error_repr(self):
+        self.cls._started = True
+        self.cls._output = 'foobar'
+        expected = "<Job name=\"%s\">\nSchedule Name: %s\nStarted: %s\n" \
+                   "Finished: %s\nExit Code: %s\nOutput: %s\n" % (
+                       'jname', 'schedname', True, False, -1, 'foobar'
+                   )
+        assert self.cls.error_repr == expected

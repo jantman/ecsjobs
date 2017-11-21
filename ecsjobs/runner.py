@@ -38,6 +38,9 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import sys
 import argparse
 import logging
+from copy import copy
+from time import sleep
+from datetime import datetime, timedelta
 
 from ecsjobs.version import VERSION, PROJECT_URL
 from ecsjobs.config import Config
@@ -55,6 +58,11 @@ class EcsJobsRunner(object):
 
     def __init__(self, config):
         self._conf = config
+        self._finished = []
+        self._running = []
+        self._run_exceptions = {}
+        self._start_time = None
+        self._timeout = None
 
     def run_schedules(self, schedule_names):
         """
@@ -63,6 +71,62 @@ class EcsJobsRunner(object):
         :param schedule_names: names of the schedules to run
         :type schedule_names: list
         """
+        self._finished = []
+        self._running = []
+        self._run_exceptions = {}
+        jobs = self._conf.jobs_for_schedules(schedule_names)
+        logger.info('Running %d jobs for schedules %s: %s',
+                    len(jobs), schedule_names, jobs)
+        self._start_time = datetime.now()
+        self._timeout = self._start_time + timedelta(
+            seconds=self._conf.get_global('max_total_runtime_sec')
+        )
+        for j in jobs:
+            logger.debug('now=%s timeout=%s', datetime.now(), self._timeout)
+            if datetime.now() >= self._timeout:
+                logger.error('Time limit reached; not running any more jobs!')
+                break
+            try:
+                logger.debug('Running job: %s', j)
+                res = j.run()
+            except Exception as ex:
+                logger.error('Job %s failed to run:\n%s', j, j.error_repr,
+                             exc_info=True)
+                self._run_exceptions[j] = ex
+                self._finished.append(j)
+                continue
+            if res is None:
+                logger.info('Job %s still running; will poll for result', j)
+                self._running.append(j)
+            else:
+                logger.info('Job %s finished (success=%s)', j, res)
+                self._finished.append(j)
+        self._poll_jobs()
+        self._report()
+
+    def _poll_jobs(self):
+        """
+        Poll the jobs in ``self._running``; if they're finished, move the Job
+        to ``self._finished``.
+        """
+        sleep_sec = self._conf.get_global('inter_poll_sleep_sec')
+        while len(self._running) > 0:
+            if datetime.now() >= self._timeout:
+                logger.error('Time limit reached; not polling any more jobs!')
+                break
+            logger.info('Polling %d running jobs...', len(self._running))
+            for j in copy(self._running):
+                if j.poll():
+                    logger.info('Job %s finished', j)
+                    self._running.remove(j)
+                    self._finished.append(j)
+                else:
+                    logger.debug('Job %s still running', j)
+            if len(self._running) > 0:
+                logger.debug('Sleeping %ss before next poll', sleep_sec)
+                sleep(sleep_sec)
+
+    def _report(self):
         raise NotImplementedError()
 
 
