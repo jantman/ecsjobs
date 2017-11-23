@@ -37,6 +37,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 import pytest
 from ecsjobs.jobs.base import Job
+from datetime import datetime, timedelta
 
 
 class TestBaseJob(object):
@@ -89,11 +90,17 @@ class TestBaseJob(object):
     def test_repr(self):
         assert self.cls.__repr__() == '<Job name="jname">'
 
+    def test_duration(self):
+        self.cls._start_time = datetime(2017, 11, 23, 14, 52, 34)
+        td = timedelta(seconds=3668)
+        self.cls._finish_time = self.cls._start_time + td
+        assert self.cls.duration == td
+
     def test_error_repr(self):
         self.cls._started = True
         self.cls._output = 'foobar'
         expected = "<Job name=\"%s\">\nSchedule Name: %s\nStarted: %s\n" \
-                   "Finished: %s\nExit Code: %s\nOutput: %s\n" % (
-                       'jname', 'schedname', True, False, -1, 'foobar'
+                   "Finished: %s\nDuration: %s\nExit Code: %s\nOutput: %s\n" % (
+                       'jname', 'schedname', True, False, None, -1, 'foobar'
                    )
         assert self.cls.error_repr == expected

@@ -107,9 +107,9 @@ class Job(object):
         :rtype: str
         """
         return "%s\nSchedule Name: %s\nStarted: %s\nFinished: %s\n" \
-               "Exit Code: %s\nOutput: %s\n" % (
+               "Duration: %s\nExit Code: %s\nOutput: %s\n" % (
                    self.__repr__(), self._schedule_name, self._started,
-                   self._finished, self._exit_code, self._output
+                   self._finished, self.duration, self._exit_code, self._output
                )
 
     @property
@@ -175,6 +175,28 @@ class Job(object):
         :rtype: str
         """
         return self._output
+
+    @abc.abstractmethod
+    def summary(self):
+        """
+        Retrieve a simple one-line summary of the Job output/status.
+
+        :return: Job one-line summary.
+        :rtype: str
+        """
+        raise NotImplementedError()
+
+    @property
+    def duration(self):
+        """
+        Return the duration/runtime of the job, or None if the job did not run.
+
+        :return: job duration
+        :rtype: ``datetime.timedelta`` or ``None``
+        """
+        if self._start_time is None or self._finish_time is None:
+            return None
+        return self._finish_time - self._start_time
 
     @abc.abstractmethod
     def run(self):

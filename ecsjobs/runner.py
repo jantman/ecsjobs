@@ -44,6 +44,7 @@ from datetime import datetime, timedelta
 
 from ecsjobs.version import VERSION, PROJECT_URL
 from ecsjobs.config import Config
+from ecsjobs.reporter import Reporter
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,11 @@ class EcsJobsRunner(object):
                 sleep(sleep_sec)
 
     def _report(self):
-        raise NotImplementedError()
+        """Generate and send email report."""
+        Reporter(self._conf).run(
+            self._finished, self._running, self._run_exceptions,
+            self._start_time, datetime.now()
+        )
 
 
 def parse_args(argv):

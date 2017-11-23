@@ -1,0 +1,404 @@
+"""
+The latest version of this package is available at:
+<http://github.com/jantman/ecsjobs>
+
+##################################################################################
+Copyright 2017 Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
+
+    This file is part of ecsjobs, also known as ecsjobs.
+
+    ecsjobs is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ecsjobs is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with ecsjobs.  If not, see <http://www.gnu.org/licenses/>.
+
+The Copyright and Authors attributions contained herein may not be removed or
+otherwise altered, except to add the Author attribution of a contributor to
+this work. (Additional Terms pursuant to Section 7b of the AGPL v3)
+##################################################################################
+While not legally required, I sincerely request that anyone who finds
+bugs please submit them at <https://github.com/jantman/ecsjobs> or
+to me via email, and that you send any contributions or improvements
+either as a pull request on GitHub, or to me via email.
+##################################################################################
+
+AUTHORS:
+Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
+##################################################################################
+"""
+
+from unittest.mock import patch, Mock, call, DEFAULT, PropertyMock
+from datetime import datetime, timedelta
+
+import pytest
+from freezegun import freeze_time
+
+from ecsjobs.reporter import Reporter
+from ecsjobs.jobs.base import Job
+
+pbm = 'ecsjobs.reporter'
+pb = '%s.Reporter' % pbm
+
+
+class ReportTester(object):
+
+    def setup(self):
+        self.client = Mock()
+        self.mock_conf = Mock()
+        self.from_email = 'from@example.com'
+        self.to_email = ['to1@foo.com', 'to2@foo.com']
+
+        def se_conf_get(k):
+            if k == 'from_email':
+                return self.from_email
+            elif k == 'to_email':
+                return self.to_email
+            return None
+
+        self.mock_conf.get_global.side_effect = se_conf_get
+        with patch('%s.boto3.client' % pbm) as m_boto:
+            m_boto.return_value = self.client
+            self.cls = Reporter(self.mock_conf)
+
+
+class TestInit(object):
+
+    def test_init(self):
+        conf = Mock()
+        with patch('%s.boto3.client' % pbm) as m_boto:
+            cls = Reporter(conf)
+        assert cls._config == conf
+        assert m_boto.mock_calls == [call('ses')]
+        assert cls._ses == m_boto.return_value
+
+
+class TestRun(ReportTester):
+
+    def test_run(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+        with patch('%s._make_report' % pb) as mock_mr:
+            mock_mr.return_value = 'my_html_report'
+            self.cls.run(
+                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
+            )
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com', 'to2@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'ECSJobs Report',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+
+    def test_run_exception(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+
+        self.client.send_email.side_effect = RuntimeError('foo')
+        with patch('%s._make_report' % pb) as mock_mr:
+            mock_mr.return_value = 'my_html_report'
+            with pytest.raises(RuntimeError) as exc:
+                self.cls.run(
+                    m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
+                )
+        assert str(exc.value) == 'foo'
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com', 'to2@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'ECSJobs Report',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+
+
+class TestMakeReport(ReportTester):
+
+    @freeze_time('2017-11-23 12:34:56')
+    def test_make_report(self):
+        j1 = Mock(spec_set=Job, name='job1')
+        type(j1).name = PropertyMock(return_value='job1')
+        j2 = Mock(spec_set=Job, name='job2')
+        type(j2).name = PropertyMock(return_value='job2')
+        j3 = Mock(spec_set=Job, name='job3')
+        type(j3).name = PropertyMock(return_value='job3')
+        m_exc = Mock()
+        excs = {j2: m_exc}
+        finished = [j1, j2]
+        unfinished = [j3]
+        s_dt = datetime(2017, 11, 12, 13, 00, 00)
+        e_dt = datetime(2017, 11, 12, 14, 2, 33)
+        expected = "<p>ECSJobs run report for uname@hname at " \
+                   "Thursday, 2017-11-23 12:34:56 </p>\n" \
+                   "<p>Total Duration: 1:02:33</p>\n" \
+                   "<table style=\"border: 1px solid black; border-collapse: " \
+                   "collapse;\">\n<tr>" \
+                   "<th style=\"border: 1px solid black;\">Command</th>" \
+                   "<th style=\"border: 1px solid black;\">Exit Code</th>" \
+                   "<th style=\"border: 1px solid black;\">Duration</th>" \
+                   "<th style=\"border: 1px solid black;\">Message</th>" \
+                   "</tr>\n" \
+                   "tr-job1\ntr-job2\ntr-job3\n" \
+                   "</table>\n" \
+                   "div-job1\n<hr />\n" \
+                   "div-job2\n<hr />\n" \
+                   "div-job3\n<hr />\n"
+
+        def se_tr(cls, j, exc=None, unfinished=False):
+            return "tr-%s\n" % j.name
+
+        def se_div(cls, j, exc=None, unfinished=False):
+            return "div-%s\n" % j.name
+
+        with patch.multiple(
+            pb,
+            autospec=True,
+            _tr_for_job=DEFAULT,
+            _div_for_job=DEFAULT
+        ) as mocks:
+            mocks['_tr_for_job'].side_effect = se_tr
+            mocks['_div_for_job'].side_effect = se_div
+            with patch.multiple(
+                pbm,
+                autospec=True,
+                getuser=DEFAULT,
+                gethostname=DEFAULT
+            ) as modmocks:
+                modmocks['getuser'].return_value = 'uname'
+                modmocks['gethostname'].return_value = 'hname'
+                res = self.cls._make_report(
+                    finished, unfinished, excs, s_dt, e_dt
+                )
+        assert res == expected
+        assert mocks['_tr_for_job'].mock_calls == [
+            call(self.cls, j1, exc=None),
+            call(self.cls, j2, exc=m_exc),
+            call(self.cls, j3, unfinished=True)
+        ]
+        assert mocks['_div_for_job'].mock_calls == [
+            call(self.cls, j1, exc=None),
+            call(self.cls, j2, exc=m_exc),
+            call(self.cls, j3, unfinished=True)
+        ]
+        assert modmocks['getuser'].mock_calls == [call()]
+        assert modmocks['gethostname'].mock_calls == [call()]
+
+
+class TestTd(ReportTester):
+
+    def test_td(self):
+        expected = '<td style="border: 1px solid black; padding: 1em;">%s' \
+                   '</td>' % 'foo'
+        assert self.cls.td('foo') == expected
+
+
+class TestTrForJob(ReportTester):
+
+    def test_simple(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #66ff66;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>0</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td>summary</td>' \
+                   '</tr>' + "\n"
+
+        def se_td(_, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j)
+        assert res == expected
+
+    def test_non_zero(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=23)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #ff9999;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>23</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td>summary</td>' \
+                   '</tr>' + "\n"
+
+        def se_td(_, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j)
+        assert res == expected
+
+    def test_less_than_zero(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=-2)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #ff944d;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>-2</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td>summary</td>' \
+                   '</tr>' + "\n"
+
+        def se_td(_, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j)
+        assert res == expected
+
+    def test_unfinished(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #66ff66;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>0</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td><em>Unfinished</em></td>' \
+                   '</tr>' + "\n"
+
+        def se_td(cls, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j, unfinished=True)
+        assert res == expected
+
+    def test_not_finished(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=False)
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #66ff66;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>0</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td><em>Unfinished</em></td>' \
+                   '</tr>' + "\n"
+
+        def se_td(cls, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j)
+        assert res == expected
+
+    def test_exception(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        type(j).error_repr = PropertyMock(return_value='erpr')
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #66ff66;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>0</td>' \
+                   '<td>0:01:05</td>' \
+                   '<td><em>Exception</em></td>' \
+                   '</tr>' + "\n"
+
+        def se_td(cls, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j, exc=True)
+        assert res == expected
+
+
+class TestDivForJob(ReportTester):
+
+    def test_simple(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        type(j).error_repr = PropertyMock(return_value='erpr')
+        type(j).output = PropertyMock(return_value='jobOutput')
+        j.summary.return_value = 'summary'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong></p>' \
+                   '<pre>jobOutput</pre></div>' + "\n"
+        assert self.cls._div_for_job(j) == expected
+
+    def test_exc(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        type(j).error_repr = PropertyMock(return_value='erpr')
+        type(j).output = PropertyMock(return_value='jobOutput')
+        j.summary.return_value = 'summary'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong></p>' \
+                   '<pre>erpr\n\nfoo</pre></div>' + "\n"
+        assert self.cls._div_for_job(j, exc='foo') == expected

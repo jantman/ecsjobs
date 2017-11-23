@@ -390,3 +390,22 @@ class TestEcsJobsRunner(object):
         assert call.error(
             'Time limit reached; not polling any more jobs!'
         ) in mock_logger.mock_calls
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_report(self):
+        self.cls._finished = Mock()
+        self.cls._running = Mock()
+        self.cls._run_exceptions = Mock()
+        self.cls._start_time = datetime(2017, 10, 20, 11, 45, 00)
+        with patch('%s.Reporter' % pbm, autospec=True) as mock_report:
+            self.cls._report()
+        assert mock_report.mock_calls == [
+            call(self.config),
+            call().run(
+                self.cls._finished,
+                self.cls._running,
+                self.cls._run_exceptions,
+                datetime(2017, 10, 20, 11, 45, 00),
+                datetime(2017, 10, 20, 12, 30, 00)
+            )
+        ]
