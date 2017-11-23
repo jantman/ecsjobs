@@ -76,11 +76,14 @@ class Reporter(object):
         :type end_dt: datetime.datetime
         """
         report = self._make_report(finished, unfinished, excs, start_dt, end_dt)
+        to_addr = self._config.get_global('to_email')
+        if not isinstance(to_addr, type([])):
+            to_addr = [to_addr]
         try:
             resp = self._ses.send_email(
                 Source=self._config.get_global('from_email'),
                 Destination={
-                    'ToAddresses': self._config.get_global('to_email')
+                    'ToAddresses': to_addr
                 },
                 Message={
                     'Subject': {

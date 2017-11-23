@@ -73,11 +73,19 @@ class Schema(object):
                         'format': 'email'
                     },
                     'to_email': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'string',
-                            'format': 'email'
-                        }
+                        'oneOf': [
+                            {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'string',
+                                    'format': 'email'
+                                }
+                            },
+                            {
+                                'type': 'string',
+                                'format': 'email'
+                            }
+                        ]
                     },
                     'inter_poll_sleep_sec': {'type': 'integer'},
                     'max_total_runtime_sec': {'type': 'integer'}

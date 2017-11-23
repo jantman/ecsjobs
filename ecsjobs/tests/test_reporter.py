@@ -118,6 +118,43 @@ class TestRun(ReportTester):
             )
         ]
 
+    def test_run_to_str(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+        self.to_email = 'to1@foo.com'
+        with patch('%s._make_report' % pb) as mock_mr:
+            mock_mr.return_value = 'my_html_report'
+            self.cls.run(
+                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
+            )
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'ECSJobs Report',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+
     def test_run_exception(self):
         m_finished = Mock()
         m_unfinished = Mock()

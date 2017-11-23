@@ -134,3 +134,17 @@ class LocalCommand(Job):
             self._exit_code = -2
             self._output = exc.output.decode()
         return self._exit_code == 0
+
+    def summary(self):
+        """
+        Retrieve a simple one-line summary of the Job output/status.
+
+        :return: Job one-line summary.
+        :rtype: str
+        """
+        if self.output is None:
+            return ''
+        lines = [x for x in self.output.split("\n") if x.strip() != '']
+        if len(lines) < 1:
+            return ''
+        return lines[-1]
