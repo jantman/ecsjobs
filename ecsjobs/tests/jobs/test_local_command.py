@@ -117,7 +117,7 @@ class TestLocalCommandRun(object):
         assert self.cls._finish_time == self.second_dt
 
 
-class TestLocalCommandSummary(object):
+class TestLocalCommandReportDescription(object):
 
     def setup(self):
         self.cls = LocalCommand(
@@ -126,18 +126,5 @@ class TestLocalCommandSummary(object):
             command=['/usr/bin/cmd', '-h']
         )
 
-    def test_summary_one_line(self):
-        self.cls._output = 'foo'
-        assert self.cls.summary() == 'foo'
-
-    def test_summary(self):
-        self.cls._output = "foo\n\n \nbar\n"
-        assert self.cls.summary() == 'bar'
-
-    def test_none(self):
-        self.cls._output = None
-        assert self.cls.summary() == ''
-
-    def test_short(self):
-        self.cls._output = "\n \n"
-        assert self.cls.summary() == ''
+    def test_report_description(self):
+        assert self.cls.report_description() == ['/usr/bin/cmd', '-h']

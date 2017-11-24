@@ -55,7 +55,11 @@ class TestBaseJob(object):
         assert cls._output is None
         assert cls._start_time is None
         assert cls._finish_time is None
-        assert cls._config == {'foo': 'bar', 'baz': 'blam'}
+        assert cls._config == {
+            'foo': 'bar',
+            'baz': 'blam',
+            'summary_regex': None
+        }
 
     def test_name(self):
         assert self.cls.name == 'jname'
@@ -104,3 +108,40 @@ class TestBaseJob(object):
                        'jname', 'schedname', True, False, None, -1, 'foobar'
                    )
         assert self.cls.error_repr == expected
+
+
+class TestBaseJobSummary(object):
+
+    def setup(self):
+        self.cls = Job('jname', 'schedname', foo='bar', baz='blam')
+
+    def test_summary_one_line(self):
+        self.cls._output = 'foo'
+        assert self.cls.summary() == 'foo'
+
+    def test_summary(self):
+        self.cls._output = "foo\n\n \nbar\n"
+        assert self.cls.summary() == 'bar'
+
+    def test_none(self):
+        self.cls._output = None
+        assert self.cls.summary() == ''
+
+    def test_short(self):
+        self.cls._output = "\n \n"
+        assert self.cls.summary() == ''
+
+    def test_regex_one(self):
+        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._output = "foo\n"
+        assert self.cls.summary() == 'foo'
+
+    def test_regex_multiple(self):
+        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._output = "foo\nfie\nfoe\nbar\nfit\nbaz"
+        assert self.cls.summary() == 'fit'
+
+    def test_regex_no_match(self):
+        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._output = "\nbar\nbaz\nblam"
+        assert self.cls.summary() == 'blam'

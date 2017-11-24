@@ -133,7 +133,7 @@ class Reporter(object):
         html += '<table style="border: 1px solid black; ' \
                 'border-collapse: collapse;">' + "\n"
         html += '<tr>'
-        html += self.th('Command')
+        html += self.th('Job Name')
         html += self.th('Exit Code')
         html += self.th('Duration')
         html += self.th('Message')
@@ -172,15 +172,15 @@ class Reporter(object):
         :rtype: str
         """
         bg = '#66ff66'
-        if job.exitcode != 0:
+        if job.exitcode != 0 or exc is not None:
             bg = '#ff9999'
-        if job.exitcode < 0:
+        elif unfinished:
             bg = '#ff944d'
         res = '<tr style="background-color: %s;">' % bg
         res += self.td('<a href="#%s">%s</a>' % (job.name, job.name))
         res += self.td(job.exitcode)
         res += self.td(job.duration)
-        if unfinished or not job.is_finished:
+        if unfinished:
             res += self.td('<em>Unfinished</em>')
         elif exc is not None:
             res += self.td('<em>Exception</em>')
@@ -204,8 +204,8 @@ class Reporter(object):
         :return: HTML div for the report
         :rtype: str
         """
-        res = '<div><p><strong><a name="%s">%s</a></strong></p>' % (
-            job.name, job.name
+        res = '<div><p><strong><a name="%s">%s</a></strong> - %s</p>' % (
+            job.name, job.name, job.report_description()
         )
         if exc is not None:
             res += '<pre>%s\n\n%s</pre>' % (job.error_repr, exc)

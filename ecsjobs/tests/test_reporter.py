@@ -217,7 +217,7 @@ class TestMakeReport(ReportTester):
                    "<p>Total Duration: 1:02:33</p>\n" \
                    "<table style=\"border: 1px solid black; border-collapse: " \
                    "collapse;\">\n<tr>" \
-                   "<th style=\"border: 1px solid black;\">Command</th>" \
+                   "<th style=\"border: 1px solid black;\">Job Name</th>" \
                    "<th style=\"border: 1px solid black;\">Exit Code</th>" \
                    "<th style=\"border: 1px solid black;\">Duration</th>" \
                    "<th style=\"border: 1px solid black;\">Message</th>" \
@@ -329,7 +329,7 @@ class TestTrForJob(ReportTester):
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
         j.summary.return_value = 'summary'
-        expected = '<tr style="background-color: #ff944d;">' \
+        expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
                    '<td>-2</td>' \
                    '<td>0:01:05</td>' \
@@ -351,7 +351,7 @@ class TestTrForJob(ReportTester):
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
         j.summary.return_value = 'summary'
-        expected = '<tr style="background-color: #66ff66;">' \
+        expected = '<tr style="background-color: #ff944d;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
                    '<td>0</td>' \
                    '<td>0:01:05</td>' \
@@ -366,28 +366,6 @@ class TestTrForJob(ReportTester):
             res = self.cls._tr_for_job(j, unfinished=True)
         assert res == expected
 
-    def test_not_finished(self):
-        j = Mock(spec_set=Job)
-        type(j).name = PropertyMock(return_value='myjob')
-        type(j).exitcode = PropertyMock(return_value=0)
-        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
-        type(j).is_finished = PropertyMock(return_value=False)
-        j.summary.return_value = 'summary'
-        expected = '<tr style="background-color: #66ff66;">' \
-                   '<td><a href="#myjob">myjob</a></td>' \
-                   '<td>0</td>' \
-                   '<td>0:01:05</td>' \
-                   '<td><em>Unfinished</em></td>' \
-                   '</tr>' + "\n"
-
-        def se_td(cls, s):
-            return '<td>%s</td>' % s
-
-        with patch('%s.td' % pb, autospec=True) as mock_td:
-            mock_td.side_effect = se_td
-            res = self.cls._tr_for_job(j)
-        assert res == expected
-
     def test_exception(self):
         j = Mock(spec_set=Job)
         type(j).name = PropertyMock(return_value='myjob')
@@ -396,7 +374,7 @@ class TestTrForJob(ReportTester):
         type(j).is_finished = PropertyMock(return_value=True)
         type(j).error_repr = PropertyMock(return_value='erpr')
         j.summary.return_value = 'summary'
-        expected = '<tr style="background-color: #66ff66;">' \
+        expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
                    '<td>0</td>' \
                    '<td>0:01:05</td>' \
@@ -423,8 +401,9 @@ class TestDivForJob(ReportTester):
         type(j).error_repr = PropertyMock(return_value='erpr')
         type(j).output = PropertyMock(return_value='jobOutput')
         j.summary.return_value = 'summary'
-        expected = '<div><p><strong><a name="myjob">myjob</a></strong></p>' \
-                   '<pre>jobOutput</pre></div>' + "\n"
+        j.report_description.return_value = 'Job Description'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
+                   'Job Description</p><pre>jobOutput</pre></div>' + "\n"
         assert self.cls._div_for_job(j) == expected
 
     def test_exc(self):
@@ -436,6 +415,7 @@ class TestDivForJob(ReportTester):
         type(j).error_repr = PropertyMock(return_value='erpr')
         type(j).output = PropertyMock(return_value='jobOutput')
         j.summary.return_value = 'summary'
-        expected = '<div><p><strong><a name="myjob">myjob</a></strong></p>' \
-                   '<pre>erpr\n\nfoo</pre></div>' + "\n"
+        j.report_description.return_value = 'Job Description'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
+                   'Job Description</p><pre>erpr\n\nfoo</pre></div>' + "\n"
         assert self.cls._div_for_job(j, exc='foo') == expected

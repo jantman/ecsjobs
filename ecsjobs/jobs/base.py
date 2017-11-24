@@ -38,6 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import abc
 import logging
 from copy import deepcopy
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ class Job(object):
     * **class_name** - The name of a :py:class:`ecsjobs.jobs.base.Job` subclass.
     * **schedule** - A string to identify which jobs to run at which times.
 
+    Optional configuration:
+
+    * **summary_regex** - A regular expression to use for extracting a string
+      from the job output for use in the summary table. If there is more than
+      one match, the last one will be used.
+
     Plus whatever configuration items are required by subclasses.
     """
 
@@ -63,7 +70,8 @@ class Job(object):
         'properties': {
             'name': {'type': 'string'},
             'schedule': {'type': 'string'},
-            'class_name': {'type': 'string'}
+            'class_name': {'type': 'string'},
+            'summary_regex': {'type': 'string'}
         },
         'required': [
             'name',
@@ -72,7 +80,7 @@ class Job(object):
         ]
     }
 
-    _defaults = {}
+    _defaults = {'summary_regex': None}
 
     def __init__(self, name, schedule, **kwargs):
         """
@@ -176,12 +184,29 @@ class Job(object):
         """
         return self._output
 
-    @abc.abstractmethod
     def summary(self):
         """
         Retrieve a simple one-line summary of the Job output/status.
 
         :return: Job one-line summary.
+        :rtype: str
+        """
+        if self.output is None:
+            return ''
+        if self._config['summary_regex'] is not None:
+            res = re.findall(self._config['summary_regex'], self.output, re.M)
+            if len(res) > 0:
+                return res[-1]
+        lines = [x for x in self.output.split("\n") if x.strip() != '']
+        if len(lines) < 1:
+            return ''
+        return lines[-1]
+
+    @abc.abstractmethod
+    def report_description(self):
+        """
+        Return a one-line description of the Job for use in reports.
+
         :rtype: str
         """
         raise NotImplementedError()
