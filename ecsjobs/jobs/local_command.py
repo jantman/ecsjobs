@@ -36,10 +36,14 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 import abc  # noqa
+from os import unlink, fdopen, close, chmod
 from datetime import datetime
 from ecsjobs.jobs.base import Job
 import logging
 import subprocess
+import requests
+import boto3
+from tempfile import mkstemp
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +54,25 @@ class LocalCommand(Job):
     :py:prop:`~.output` property of this class contains combined STDOUT and
     STDERR. If the ``timeout`` configuration option is set,
     :py:prop:`~.exitcode` will be set to -2 if a timeout occurs.
+
+    Required configuration:
+
+    * **command** - The command to execute as either a String or a List of
+      Strings, as used by :py:func:`subprocess.run`.
+
+    Optional configuration:
+
+    * **shell** - Whether or not to execute the provided command through the
+      shell. Corresponds to the ``shell`` argument of :py:func:`subprocess.run`.
+    * **timeout** - An integer number of seconds to allow the command to run.
+      Cooresponds to the ``timeout`` argument of :py:func:`subprocess.run`.
+    * **script_source** - A URL to retrieve an executable script from, in place
+      of ``command``. If specified, the value of ``command`` is ignored. This
+      currently supports URLs with ``http://``, ``https://`` or ``s3://``
+      schemes. HTTP and HTTPS URLs must be directly retrievable without any
+      authentication. S3 URLs will use the same credentials already in use for
+      the session. **Note** that this setting will cause ecsjobs to download
+      and execute code from a potentially untrusted location.
     """
 
     _schema_dict = {
@@ -73,6 +96,11 @@ class LocalCommand(Job):
                     {'type': 'integer'},
                     {'type': 'null'}
                 ]
+            },
+            'script_source': {
+                'type': 'string',
+                'format': 'url',
+                'pattern': '^(s3|http|https)://.*$'
             }
         },
         'required': [
@@ -82,7 +110,8 @@ class LocalCommand(Job):
 
     _defaults = {
         'shell': False,
-        'timeout': None
+        'timeout': None,
+        'script_source': None
     }
 
     def __init__(self, name, schedule, **kwargs):
@@ -97,6 +126,10 @@ class LocalCommand(Job):
         :type kwargs: dict
         """
         super(LocalCommand, self).__init__(name, schedule, **kwargs)
+        if self._config['script_source'] is not None:
+            self._config['command'] = self._get_script(
+                self._config['script_source']
+            )
 
     def run(self):
         """
@@ -108,6 +141,8 @@ class LocalCommand(Job):
 
         :return: True if command exited 0, False otherwise.
         """
+        if self._finished is True:
+            return self._exit_code == 0
         logger.debug('Job %s: Running command %s shell=%s timeout=%s',
                      self.name, self._config['command'], self._config['shell'],
                      self._config['timeout'])
@@ -133,6 +168,8 @@ class LocalCommand(Job):
                            self.name, exc.timeout)
             self._exit_code = -2
             self._output = exc.output.decode()
+        if self._config['script_source'] is not None:
+            unlink(self._config['command'])
         return self._exit_code == 0
 
     def report_description(self):
@@ -142,3 +179,63 @@ class LocalCommand(Job):
         :rtype: str
         """
         return self._config['command']
+
+    def _get_script(self, script_url):
+        """
+        Download a script from HTTP/HTTPS or S3 to a temporary path, make it
+        executable, and return the path to the script.
+
+        :param script_url: URL to download - HTTP/HTTPS or S3
+        :type script_url: str
+        :return: path to the downloaded executable script
+        :rtype: str
+        """
+        if script_url.startswith('s3://'):
+            url = script_url[5:]
+            bkt, key = url.split('/', 1)
+            try:
+                logger.debug(
+                    'Retrieving script for %s from S3; bucket=%s key=%s',
+                    self.name, bkt, key
+                )
+                s3 = boto3.client('s3')
+                content = s3.get_object(
+                    Bucket=bkt,
+                    Key=key
+                )['Body'].read()
+                logger.debug('Got script:\n%s', content)
+            except Exception as ex:
+                logger.error('Error downloading %s', script_url, exc_info=True)
+                self._finished = True
+                self._started = True
+                self._exit_code = -3
+                self._output = 'Error downloading %s:\n%s' % (script_url, ex)
+                return None
+        elif script_url.startswith('http'):
+            try:
+                logger.debug('Retrieving script for %s from: %s', self.name,
+                             script_url)
+                content = requests.get(script_url).text
+                logger.debug('Got script:\n%s', content)
+            except Exception as ex:
+                logger.error('Error downloading %s', script_url, exc_info=True)
+                self._finished = True
+                self._started = True
+                self._exit_code = -3
+                self._output = 'Error downloading %s:\n%s' % (script_url, ex)
+                return None
+        else:
+            logger.error('Error: unsupported URL scheme: %s', script_url)
+            self._finished = True
+            self._started = True
+            self._exit_code = -3
+            self._output = 'Error: unsupported URL scheme: %s' % script_url
+            return None
+        fd, path = mkstemp('ecsjobs-%s' % self.name)
+        logger.info('Writing script for %s to: %s', self.name, path)
+        fh = fdopen(fd)
+        fh.write(content)
+        fh.close()
+        close(fd)
+        chmod(path, 700)
+        return path
