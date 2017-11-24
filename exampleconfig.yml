@@ -1,14 +1,14 @@
 global:
-  from_email: foo@example.com
+  from_email: example@example.com
   to_email:
+    - foo@example.com
     - bar@example.com
-    - baz@example.com
 jobs:
-- name: bintrue
+- name: binTrue
   class_name: LocalCommand
   schedule: foo
   command: /bin/true
-- name: binfalse
+- name: binFalse
   class_name: LocalCommand
   schedule: foo
   command: /bin/false
@@ -18,3 +18,12 @@ jobs:
   command: /usr/bin/uptime
   shell: true
   timeout: 30
+- name: noSuchCommandShell
+  class_name: LocalCommand
+  schedule: bar
+  command: /usr/bin/noSuchCommand
+  shell: true
+- name: noSuchCommand
+  class_name: LocalCommand
+  schedule: bar
+  command: /usr/bin/noSuchCommand
