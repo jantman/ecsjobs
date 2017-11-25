@@ -38,6 +38,8 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import abc  # noqa
 from ecsjobs.jobs.base import Job
 import logging
+import docker
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +64,5 @@ class EcsDockerExec(Job):
         super(EcsDockerExec, self).__init__(
             name, schedule, summary_regex=summary_regex
         )
+        self._ecs = boto3.client('ecs')
+        self._docker = docker.from_env()

@@ -52,6 +52,8 @@ class TestLocalCommand(object):
     def test_init(self):
         with patch('%s._get_script' % pb, autospec=True) as m_gs:
             cls = LocalCommand('jname', 'sname')
+        assert cls.name == 'jname'
+        assert cls.schedule_name == 'sname'
         assert cls._shell is False
         assert cls._timeout is None
         assert cls._script_source is None
@@ -62,6 +64,8 @@ class TestLocalCommand(object):
         with patch('%s._get_script' % pb, autospec=True) as m_gs:
             m_gs.return_value = '/my/temp/file'
             cls = LocalCommand('jname', 'sname', script_source='foo')
+        assert cls.name == 'jname'
+        assert cls.schedule_name == 'sname'
         assert cls._command == '/my/temp/file'
         assert cls._shell is False
         assert cls._timeout is None
@@ -75,6 +79,8 @@ class TestLocalCommand(object):
                 'jname', 'sname', summary_regex='foo', command='/bin/bar',
                 shell=True, timeout=23
             )
+        assert cls.name == 'jname'
+        assert cls.schedule_name == 'sname'
         assert cls._command == '/bin/bar'
         assert cls._shell is True
         assert cls._timeout == 23

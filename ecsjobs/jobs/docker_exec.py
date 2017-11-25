@@ -38,6 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import abc  # noqa
 from ecsjobs.jobs.base import Job
 import logging
+import docker
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +63,4 @@ class DockerExec(Job):
         super(DockerExec, self).__init__(
             name, schedule, summary_regex=summary_regex
         )
+        self._docker = docker.from_env()

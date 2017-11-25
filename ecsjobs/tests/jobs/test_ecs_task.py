@@ -35,32 +35,30 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-import abc  # noqa
-from ecsjobs.jobs.base import Job
-import logging
-import boto3
+from unittest.mock import patch, call
 
-logger = logging.getLogger(__name__)
+from ecsjobs.jobs.ecs_task import EcsTask
+
+pbm = 'ecsjobs.jobs.ecs_task'
+pb = '%s.EcsTask' % pbm
 
 
-class EcsTask(Job):
+class TestEcsTaskInit(object):
 
-    _schema_dict = {
-        'type': 'object',
-        'properties': {
-            'name': {'type': 'string'},
-            'schedule': {'type': 'string'},
-            'class_name': {'type': 'string'}
-        },
-        'required': [
-            'name',
-            'schedule',
-            'class_name'
-        ]
-    }
+    def test_init(self):
+        with patch('%s.boto3' % pbm, autospec=True) as m_boto:
+            cls = EcsTask('jname', 'sname')
+        assert cls.name == 'jname'
+        assert cls.schedule_name == 'sname'
+        assert cls._summary_regex is None
+        assert m_boto.mock_calls == [call.client('ecs')]
+        assert cls._ecs == m_boto.client.return_value
 
-    def __init__(self, name, schedule, summary_regex=None):
-        super(EcsTask, self).__init__(
-            name, schedule, summary_regex=summary_regex
-        )
-        self._ecs = boto3.client('ecs')
+    def test_init_all_options(self):
+        with patch('%s.boto3' % pbm, autospec=True) as m_boto:
+            cls = EcsTask('jname', 'sname', summary_regex='foo')
+        assert cls.name == 'jname'
+        assert cls.schedule_name == 'sname'
+        assert cls._summary_regex == 'foo'
+        assert m_boto.mock_calls == [call.client('ecs')]
+        assert cls._ecs == m_boto.client.return_value
