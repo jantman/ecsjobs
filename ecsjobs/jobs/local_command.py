@@ -54,25 +54,6 @@ class LocalCommand(Job):
     :py:prop:`~.output` property of this class contains combined STDOUT and
     STDERR. If the ``timeout`` configuration option is set,
     :py:prop:`~.exitcode` will be set to -2 if a timeout occurs.
-
-    Required configuration:
-
-    * **command** - The command to execute as either a String or a List of
-      Strings, as used by :py:func:`subprocess.run`.
-
-    Optional configuration:
-
-    * **shell** - Whether or not to execute the provided command through the
-      shell. Corresponds to the ``shell`` argument of :py:func:`subprocess.run`.
-    * **timeout** - An integer number of seconds to allow the command to run.
-      Cooresponds to the ``timeout`` argument of :py:func:`subprocess.run`.
-    * **script_source** - A URL to retrieve an executable script from, in place
-      of ``command``. If specified, the value of ``command`` is ignored. This
-      currently supports URLs with ``http://``, ``https://`` or ``s3://``
-      schemes. HTTP and HTTPS URLs must be directly retrievable without any
-      authentication. S3 URLs will use the same credentials already in use for
-      the session. **Note** that this setting will cause ecsjobs to download
-      and execute code from a potentially untrusted location.
     """
 
     _schema_dict = {
@@ -108,13 +89,8 @@ class LocalCommand(Job):
         ]
     }
 
-    _defaults = {
-        'shell': False,
-        'timeout': None,
-        'script_source': None
-    }
-
-    def __init__(self, name, schedule, **kwargs):
+    def __init__(self, name, schedule, summary_regex=None, command=None,
+                 shell=False, timeout=None, script_source=None):
         """
         Initialize a LocalCommand object.
 
@@ -122,14 +98,42 @@ class LocalCommand(Job):
         :type name: str
         :param schedule: the name of the schedule this job runs on
         :type schedule: str
-        :param kwargs: keyword arguments; see :py:attr:`~._schema_dict`
-        :type kwargs: dict
+        :param summary_regex: A regular expression to use for extracting a
+          string from the job output for use in the summary table. If there is
+          more than one match, the last one will be used.
+        :type summary_regex: ``string`` or ``None``
+        :param command: The command to execute as either a String or a List of
+          Strings, as used by :py:func:`subprocess.run`.
+        :type command: :py:obj:`str` or :py:obj:`list`
+        :param shell: Whether or not to execute the provided command through the
+          shell. Corresponds to the ``shell`` argument of
+          :py:func:`subprocess.run`.
+        :type shell: bool
+        :param timeout: An integer number of seconds to allow the command to
+          run. Cooresponds to the ``timeout`` argument of
+          :py:func:`subprocess.run`.
+        :type timeout: int
+        :param script_source: A URL to retrieve an executable script from, in
+          place of ``command``. If specified, the value of ``command`` is
+          ignored. This currently supports URLs with ``http://``, ``https://``
+          or ``s3://`` schemes. HTTP and HTTPS URLs must be directly retrievable
+          without any authentication. S3 URLs will use the same credentials
+          already in use for the session. **Note** that this setting will cause
+          ecsjobs to download and execute code from a potentially untrusted
+          location.
+        :type script_source: str
         """
-        super(LocalCommand, self).__init__(name, schedule, **kwargs)
-        if self._config['script_source'] is not None:
-            self._config['command'] = self._get_script(
-                self._config['script_source']
-            )
+        super(LocalCommand, self).__init__(
+            name,
+            schedule,
+            summary_regex=summary_regex
+        )
+        self._command = command
+        self._shell = shell
+        self._timeout = timeout
+        self._script_source = script_source
+        if self._script_source is not None:
+            self._command = self._get_script(self._script_source)
 
     def run(self):
         """
@@ -144,17 +148,16 @@ class LocalCommand(Job):
         if self._finished is True:
             return self._exit_code == 0
         logger.debug('Job %s: Running command %s shell=%s timeout=%s',
-                     self.name, self._config['command'], self._config['shell'],
-                     self._config['timeout'])
+                     self.name, self._command, self._shell, self._timeout)
         try:
             self._started = True
             self._start_time = datetime.now()
             s = subprocess.run(
-                self._config['command'],
+                self._command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                shell=self._config['shell'],
-                timeout=self._config['timeout']
+                shell=self._shell,
+                timeout=self._timeout
             )
             self._finished = True
             self._finish_time = datetime.now()
@@ -168,8 +171,8 @@ class LocalCommand(Job):
                            self.name, exc.timeout)
             self._exit_code = -2
             self._output = exc.output.decode()
-        if self._config['script_source'] is not None:
-            unlink(self._config['command'])
+        if self._script_source is not None:
+            unlink(self._command)
         return self._exit_code == 0
 
     def report_description(self):
@@ -178,7 +181,7 @@ class LocalCommand(Job):
 
         :rtype: str
         """
-        return self._config['command']
+        return self._command
 
     def _get_script(self, script_url):
         """

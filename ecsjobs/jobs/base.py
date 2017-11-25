@@ -37,7 +37,6 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 import abc
 import logging
-from copy import deepcopy
 import re
 
 logger = logging.getLogger(__name__)
@@ -52,14 +51,6 @@ class Job(object):
     * **name** - A unique name for the job.
     * **class_name** - The name of a :py:class:`ecsjobs.jobs.base.Job` subclass.
     * **schedule** - A string to identify which jobs to run at which times.
-
-    Optional configuration:
-
-    * **summary_regex** - A regular expression to use for extracting a string
-      from the job output for use in the summary table. If there is more than
-      one match, the last one will be used.
-
-    Plus whatever configuration items are required by subclasses.
     """
 
     __metaclass__ = abc.ABCMeta
@@ -80,9 +71,7 @@ class Job(object):
         ]
     }
 
-    _defaults = {'summary_regex': None}
-
-    def __init__(self, name, schedule, **kwargs):
+    def __init__(self, name, schedule, summary_regex=None):
         """
         Initialize a Job object.
 
@@ -90,6 +79,10 @@ class Job(object):
         :type name: str
         :param schedule: the name of the schedule this job runs on
         :type schedule: str
+        :param summary_regex: A regular expression to use for extracting a
+          string from the job output for use in the summary table. If there is
+          more than one match, the last one will be used.
+        :type summary_regex: ``string`` or ``None``
         """
         self._name = name
         self._schedule_name = schedule
@@ -99,8 +92,7 @@ class Job(object):
         self._output = None
         self._start_time = None
         self._finish_time = None
-        self._config = deepcopy(self._defaults)
-        self._config.update(kwargs)
+        self._summary_regex = summary_regex
 
     def __repr__(self):
         return '<%s name="%s">' % (type(self).__name__, self.name)
@@ -193,8 +185,8 @@ class Job(object):
         """
         if self.output is None:
             return ''
-        if self._config['summary_regex'] is not None:
-            res = re.findall(self._config['summary_regex'], self.output, re.M)
+        if self._summary_regex is not None:
+            res = re.findall(self._summary_regex, self.output, re.M)
             if len(res) > 0:
                 return res[-1]
         lines = [x for x in self.output.split("\n") if x.strip() != '']

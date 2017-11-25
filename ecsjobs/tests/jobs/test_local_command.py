@@ -51,27 +51,36 @@ class TestLocalCommand(object):
 
     def test_init(self):
         with patch('%s._get_script' % pb, autospec=True) as m_gs:
-            cls = LocalCommand('jname', 'sname', foo='bar')
-        assert cls._config == {
-            'foo': 'bar',
-            'shell': False,
-            'timeout': None,
-            'script_source': None
-        }
+            cls = LocalCommand('jname', 'sname')
+        assert cls._shell is False
+        assert cls._timeout is None
+        assert cls._script_source is None
+        assert cls._summary_regex is None
         assert m_gs.mock_calls == []
 
     def test_init_script_source(self):
         with patch('%s._get_script' % pb, autospec=True) as m_gs:
             m_gs.return_value = '/my/temp/file'
-            cls = LocalCommand('jname', 'sname', foo='bar', script_source='foo')
-        assert cls._config == {
-            'foo': 'bar',
-            'shell': False,
-            'timeout': None,
-            'script_source': 'foo',
-            'command': '/my/temp/file'
-        }
+            cls = LocalCommand('jname', 'sname', script_source='foo')
+        assert cls._command == '/my/temp/file'
+        assert cls._shell is False
+        assert cls._timeout is None
+        assert cls._script_source == 'foo'
+        assert cls._summary_regex is None
         assert m_gs.mock_calls == [call(cls, 'foo')]
+
+    def test_init_all_options(self):
+        with patch('%s._get_script' % pb, autospec=True) as m_gs:
+            cls = LocalCommand(
+                'jname', 'sname', summary_regex='foo', command='/bin/bar',
+                shell=True, timeout=23
+            )
+        assert cls._command == '/bin/bar'
+        assert cls._shell is True
+        assert cls._timeout == 23
+        assert cls._script_source is None
+        assert cls._summary_regex == 'foo'
+        assert m_gs.mock_calls == []
 
 
 class TestLocalCommandRun(object):
@@ -112,8 +121,8 @@ class TestLocalCommandRun(object):
         assert m_unlink.mock_calls == []
 
     def test_success_script(self):
-        self.cls._config['script_source'] = 's3://foo/bar'
-        self.cls._config['command'] = '/foo/bar'
+        self.cls._script_source = 's3://foo/bar'
+        self.cls._command = '/foo/bar'
         self.frozen = None
         self.second_dt = datetime(2017, 10, 20, 12, 35, 00)
         self.retval = Mock(
@@ -168,8 +177,8 @@ class TestLocalCommandRun(object):
         assert m_unlink.mock_calls == []
 
     def test_timeout_script(self):
-        self.cls._config['script_source'] = 's3://foo/bar'
-        self.cls._config['command'] = '/foo/bar'
+        self.cls._script_source = 's3://foo/bar'
+        self.cls._command = '/foo/bar'
         self.frozen = None
         self.second_dt = datetime(2017, 10, 20, 12, 35, 00)
 

@@ -46,7 +46,7 @@ class TestBaseJob(object):
         self.cls = Job('jname', 'schedname')
 
     def test_init(self):
-        cls = Job('jname', 'schedname', foo='bar', baz='blam')
+        cls = Job('jname', 'schedname')
         assert cls._name == 'jname'
         assert cls._schedule_name == 'schedname'
         assert cls._started is False
@@ -55,11 +55,19 @@ class TestBaseJob(object):
         assert cls._output is None
         assert cls._start_time is None
         assert cls._finish_time is None
-        assert cls._config == {
-            'foo': 'bar',
-            'baz': 'blam',
-            'summary_regex': None
-        }
+        assert cls._summary_regex is None
+
+    def test_init_regex(self):
+        cls = Job('jname', 'schedname', summary_regex='foobar')
+        assert cls._name == 'jname'
+        assert cls._schedule_name == 'schedname'
+        assert cls._started is False
+        assert cls._finished is False
+        assert cls._exit_code == -1
+        assert cls._output is None
+        assert cls._start_time is None
+        assert cls._finish_time is None
+        assert cls._summary_regex == 'foobar'
 
     def test_name(self):
         assert self.cls.name == 'jname'
@@ -113,7 +121,7 @@ class TestBaseJob(object):
 class TestBaseJobSummary(object):
 
     def setup(self):
-        self.cls = Job('jname', 'schedname', foo='bar', baz='blam')
+        self.cls = Job('jname', 'schedname')
 
     def test_summary_one_line(self):
         self.cls._output = 'foo'
@@ -132,16 +140,16 @@ class TestBaseJobSummary(object):
         assert self.cls.summary() == ''
 
     def test_regex_one(self):
-        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._summary_regex = '^f.*$'
         self.cls._output = "foo\n"
         assert self.cls.summary() == 'foo'
 
     def test_regex_multiple(self):
-        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._summary_regex = '^f.*$'
         self.cls._output = "foo\nfie\nfoe\nbar\nfit\nbaz"
         assert self.cls.summary() == 'fit'
 
     def test_regex_no_match(self):
-        self.cls._config['summary_regex'] = '^f.*$'
+        self.cls._summary_regex = '^f.*$'
         self.cls._output = "\nbar\nbaz\nblam"
         assert self.cls.summary() == 'blam'
