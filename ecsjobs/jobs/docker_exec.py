@@ -58,5 +58,7 @@ class DockerExec(Job):
         ]
     }
 
-    def __init__(self, name, schedule, **kwargs):
-        super(DockerExec, self).__init__(name, schedule)
+    def __init__(self, name, schedule, summary_regex=None):
+        super(DockerExec, self).__init__(
+            name, schedule, summary_regex=summary_regex
+        )

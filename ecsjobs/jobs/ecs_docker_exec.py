@@ -58,5 +58,7 @@ class EcsDockerExec(Job):
         ]
     }
 
-    def __init__(self, name, schedule, **kwargs):
-        super(EcsDockerExec, self).__init__(name, schedule)
+    def __init__(self, name, schedule, summary_regex=None):
+        super(EcsDockerExec, self).__init__(
+            name, schedule, summary_regex=summary_regex
+        )
