@@ -56,6 +56,7 @@ class TestBaseJob(object):
         assert cls._start_time is None
         assert cls._finish_time is None
         assert cls._summary_regex is None
+        assert cls._skip is False
 
     def test_init_regex(self):
         cls = Job('jname', 'schedname', summary_regex='foobar')
@@ -68,9 +69,17 @@ class TestBaseJob(object):
         assert cls._start_time is None
         assert cls._finish_time is None
         assert cls._summary_regex == 'foobar'
+        assert cls._skip is False
 
     def test_name(self):
         assert self.cls.name == 'jname'
+
+    def test_skip(self):
+        assert self.cls.skip is False
+
+    def test_skip_true(self):
+        self.cls._skip = True
+        assert self.cls.skip is True
 
     def test_schedule_name(self):
         assert self.cls.schedule_name == 'schedname'

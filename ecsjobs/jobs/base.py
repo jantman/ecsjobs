@@ -92,6 +92,7 @@ class Job(object):
         self._output = None
         self._start_time = None
         self._finish_time = None
+        self._skip = False
         self._summary_regex = summary_regex
 
     def __repr__(self):
@@ -121,6 +122,15 @@ class Job(object):
         :rtype: str
         """
         return self._name
+
+    @property
+    def skip(self):
+        """
+        Whether or not to skip running this job because of the cron expression.
+
+        :rtype: bool
+        """
+        return self._skip
 
     @property
     def schedule_name(self):
