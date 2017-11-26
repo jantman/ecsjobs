@@ -125,7 +125,7 @@ class TestValidateExamples(object):
         conf = yaml.load(config_yaml)
         Schema().validate(conf)
 
-    def test_local_command_missing_command(self):
+    def test_local_command_missing_schedule(self):
         config_yaml = dedent("""
         global:
           from_email: you@example.com
@@ -134,7 +134,6 @@ class TestValidateExamples(object):
         jobs:
         - name: jobOne
           class_name: DockerExec
-          schedule: foo
         - name: jobTwo
           class_name: LocalCommand
           schedule: foo
@@ -142,8 +141,8 @@ class TestValidateExamples(object):
         conf = yaml.load(config_yaml)
         with pytest.raises(ValidationError) as exc:
             Schema().validate(conf)
-        assert list(exc.value.relative_path) == ['jobs', 1]
-        assert exc.value.instance == conf['jobs'][1]
+        assert list(exc.value.relative_path) == ['jobs', 0]
+        assert exc.value.instance == conf['jobs'][0]
         assert exc.value.validator == 'anyOf'
         assert list(exc.value.relative_schema_path) == [
             'properties', 'jobs', 'items', 'anyOf'
