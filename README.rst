@@ -20,3 +20,7 @@ and then sending an email report on their success or failure. The main shortcomi
 the lack of simple built-in failure monitoring for Scheduled ECS Tasks, the lack of a built-in way to execute a
 command in a running (ECS Service) container, and the lack of useful email reports.
 
+The generated email reports look like (this one for ``exampleconfig.yml``):
+
+.. image:: https://raw.githubusercontent.com/jantman/ecsjobs/master/docs/source/report.png
+   :alt: screenshot of generated HTML email report
