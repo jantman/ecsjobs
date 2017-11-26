@@ -50,7 +50,14 @@ logger = logging.getLogger(__name__)
 
 
 class LocalCommand(Job):
+    """
+    Job class to run a local command via :py:func:`subprocess.run`. The
+    :py:attr:`~.output` property of this class contains combined STDOUT and
+    STDERR.
+    """
 
+    #: Dictionary describing the configuration file schema, to be validated
+    #: with `jsonschema <https://github.com/Julian/jsonschema>`_.
     _schema_dict = {
         'type': 'object',
         'properties': {
@@ -83,10 +90,6 @@ class LocalCommand(Job):
     def __init__(self, name, schedule, summary_regex=None, command=None,
                  shell=False, timeout=None, script_source=None):
         """
-        Job class to run a local command via :py:func:`subprocess.run`. The
-        :py:attr:`~.output` property of this class contains combined STDOUT and
-        STDERR.
-
         :param name: unique name for this job
         :type name: str
         :param schedule: the name of the schedule this job runs on

@@ -295,8 +295,13 @@ intersphinx_mapping = {
     'boto3': ('https://boto3.readthedocs.io/en/latest/', None)
 }
 
-autoclass_content = 'class'
-autodoc_default_flags = ['members', 'undoc-members', 'private-members', 'show-inheritance']
+autoclass_content = 'both'
+autodoc_default_flags = [
+    'members',
+    'undoc-members',
+    'private-members',
+    'show-inheritance'
+]
 
 linkcheck_ignore = [
     r'https?://landscape\.io.*',

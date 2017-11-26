@@ -46,6 +46,8 @@ logger = logging.getLogger(__name__)
 
 class EcsDockerExec(Job):
 
+    #: Dictionary describing the configuration file schema, to be validated
+    #: with `jsonschema <https://github.com/Julian/jsonschema>`_.
     _schema_dict = {
         'type': 'object',
         'properties': {

@@ -43,9 +43,14 @@ logger = logging.getLogger(__name__)
 
 
 class Job(object):
+    """
+    Base class for all Job types/classes.
+    """
 
     __metaclass__ = abc.ABCMeta
 
+    #: Dictionary describing the configuration file schema, to be validated
+    #: with `jsonschema <https://github.com/Julian/jsonschema>`_.
     _schema_dict = {
         'type': 'object',
         'title': 'Configuration for base Job class',
@@ -64,8 +69,6 @@ class Job(object):
 
     def __init__(self, name, schedule, summary_regex=None):
         """
-        Base class for all Job types/classes.
-
         :param name: unique name for this job
         :type name: str
         :param schedule: the name of the schedule this job runs on
