@@ -19,6 +19,8 @@ Submodules
 .. toctree::
 
    ecsjobs.config
+   ecsjobs.reporter
    ecsjobs.runner
+   ecsjobs.schema
    ecsjobs.version
 

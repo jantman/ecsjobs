@@ -51,9 +51,9 @@ logger = logging.getLogger(__name__)
 class LocalCommand(Job):
     """
     Job class to run a local command via :py:func:`subprocess.run`. The
-    :py:prop:`~.output` property of this class contains combined STDOUT and
+    :py:attr:`~.output` property of this class contains combined STDOUT and
     STDERR. If the ``timeout`` configuration option is set,
-    :py:prop:`~.exitcode` will be set to -2 if a timeout occurs.
+    :py:attr:`~.exitcode` will be set to -2 if a timeout occurs.
     """
 
     _schema_dict = {

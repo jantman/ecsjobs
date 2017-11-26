@@ -233,13 +233,13 @@ class Job(object):
 
     def poll(self):
         """
-        For asynchronous jobs (:py:prop:`~.is_started` is True but
-        :py:prop:`~.is_finished` is False), check if the job has finished yet.
-        If not, return :py:prop:`~.is_finished`. If the job has finished, update
+        For asynchronous jobs (:py:attr:`~.is_started` is True but
+        :py:attr:`~.is_finished` is False), check if the job has finished yet.
+        If not, return :py:attr:`~.is_finished`. If the job has finished, update
         ``self._finish_time``, ``self._exit_code``, ``self._output`` and
-        ``self._finished`` and then return :py:prop:`~.is_finished`.
+        ``self._finished`` and then return :py:attr:`~.is_finished`.
 
-        :return: :py:prop:`~.is_finished`
+        :return: :py:attr:`~.is_finished`
         :rtype: bool
         """
         return self.is_finished

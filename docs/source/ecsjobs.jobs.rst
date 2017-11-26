@@ -15,4 +15,5 @@ Submodules
    ecsjobs.jobs.docker_exec
    ecsjobs.jobs.ecs_docker_exec
    ecsjobs.jobs.ecs_task
+   ecsjobs.jobs.local_command
 
