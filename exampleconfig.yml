@@ -40,4 +40,4 @@ jobs:
   class_name: LocalCommand
   schedule: foo
   summary_regex: .*will exit.*
-  script_source: https://github.com/jantman/ecsjobs/blob/master/docs/source/examples/https_script.sh
+  script_source: https://raw.githubusercontent.com/jantman/ecsjobs/master/docs/source/examples/https_script.sh
