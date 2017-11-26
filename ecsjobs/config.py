@@ -38,7 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import os
 import logging
 import glob
-from copy import copy
+from copy import copy, deepcopy
 
 import yaml
 import boto3
@@ -306,5 +306,7 @@ class Config(object):
                         j['class_name'], j['name']
                     )
                 )
-            self._jobs.append(cls(**j))
+            conf = deepcopy(j)
+            del conf['class_name']
+            self._jobs.append(cls(**conf))
         logger.info('Created %d Job instances', len(self._jobs))

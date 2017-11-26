@@ -582,7 +582,7 @@ class TestMakeJobs(ConfigTester):
             'Bar': FakeJob
         }
         self.cls._raw_conf['jobs'] = [
-            {'class_name': 'Foo', 'name': 'foo', 'schedule': 's1'},
+            {'class_name': 'Foo', 'name': 'foo', 'schedule': 's1', 'bar': 'b'},
             {'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'},
             {'class_name': 'Bar', 'name': 'bar', 'schedule': 's1'},
         ]
@@ -591,13 +591,13 @@ class TestMakeJobs(ConfigTester):
             self.cls._make_jobs()
         assert len(self.cls._jobs) == 3
         assert self.cls._jobs[0].kwargs == {
-            'class_name': 'Foo', 'name': 'foo', 'schedule': 's1'
+            'name': 'foo', 'schedule': 's1', 'bar': 'b'
         }
         assert self.cls._jobs[1].kwargs == {
-            'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'
+            'name': 'foo2', 'schedule': 's2'
         }
         assert self.cls._jobs[2].kwargs == {
-            'class_name': 'Bar', 'name': 'bar', 'schedule': 's1'
+            'name': 'bar', 'schedule': 's1'
         }
 
     def test_error(self):
@@ -616,10 +616,10 @@ class TestMakeJobs(ConfigTester):
         assert str(exc.value) == 'ERROR: No known Job subclass "Bar" (job bar)'
         assert len(self.cls._jobs) == 2
         assert self.cls._jobs[0].kwargs == {
-            'class_name': 'Foo', 'name': 'foo', 'schedule': 's1'
+            'name': 'foo', 'schedule': 's1'
         }
         assert self.cls._jobs[1].kwargs == {
-            'class_name': 'Foo', 'name': 'foo2', 'schedule': 's2'
+            'name': 'foo2', 'schedule': 's2'
         }
 
 
