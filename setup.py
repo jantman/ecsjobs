@@ -42,11 +42,11 @@ with open('README.rst') as file:
     long_description = file.read()
 
 requires = [
-    'requests',
-    'boto3',
-    'docker',
-    'PyYAML',
-    'jsonschema'
+    'requests>=2.0.0,<3.0.0',
+    'boto3>=1.0.0,<2.0.0',
+    'docker>=2.0.0,<3.0.0',
+    'PyYAML>=3.0,<4.0',
+    'jsonschema>=2.0.0,<3.0.0'
 ]
 
 classifiers = [
