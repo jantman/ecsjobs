@@ -1,8 +1,6 @@
 global:
-  from_email: example@example.com
-  to_email:
-    - foo@example.com
-    - bar@example.com
+  from_email: jason@jasonantman.com
+  to_email: jason@jasonantman.com
 jobs:
 - name: binTrue
   class_name: LocalCommand
@@ -27,3 +25,19 @@ jobs:
   class_name: LocalCommand
   schedule: bar
   command: /usr/bin/noSuchCommand
+- name: lsal
+  class_name: LocalCommand
+  schedule: bar
+  command: ["ls", "-al"]
+  summary_regex: .*exampleconfig\.yml$
+- name: timeout
+  class_name: LocalCommand
+  schedule: foo
+  command: "echo 'foo' && sleep 10 && echo 'bar'"
+  timeout: 2
+  shell: true
+- name: https_script_success
+  class_name: LocalCommand
+  schedule: foo
+  summary_regex: .*will exit.*
+  script_source: https://github.com/jantman/ecsjobs/blob/master/docs/source/examples/https_script.sh
