@@ -51,7 +51,7 @@ class TestBaseJob(object):
         assert cls._schedule_name == 'schedname'
         assert cls._started is False
         assert cls._finished is False
-        assert cls._exit_code == -1
+        assert cls._exit_code is None
         assert cls._output is None
         assert cls._start_time is None
         assert cls._finish_time is None
@@ -64,7 +64,7 @@ class TestBaseJob(object):
         assert cls._schedule_name == 'schedname'
         assert cls._started is False
         assert cls._finished is False
-        assert cls._exit_code == -1
+        assert cls._exit_code is None
         assert cls._output is None
         assert cls._start_time is None
         assert cls._finish_time is None
@@ -120,9 +120,19 @@ class TestBaseJob(object):
     def test_error_repr(self):
         self.cls._started = True
         self.cls._output = 'foobar'
+        self.cls._exit_code = 9
         expected = "<Job name=\"%s\">\nSchedule Name: %s\nStarted: %s\n" \
                    "Finished: %s\nDuration: %s\nExit Code: %s\nOutput: %s\n" % (
-                       'jname', 'schedname', True, False, None, -1, 'foobar'
+                       'jname', 'schedname', True, False, None, 9, 'foobar'
+                   )
+        assert self.cls.error_repr == expected
+
+    def test_error_repr_no_ecode(self):
+        self.cls._started = True
+        self.cls._output = 'foobar'
+        expected = "<Job name=\"%s\">\nSchedule Name: %s\nStarted: %s\n" \
+                   "Finished: %s\nDuration: %s\nOutput: %s\n" % (
+                       'jname', 'schedname', True, False, None, 'foobar'
                    )
         assert self.cls.error_repr == expected
 

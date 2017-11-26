@@ -68,8 +68,8 @@ class Reporter(object):
         :param unfinished: Unfinished (timed-out) Job instances.
         :type unfinished: list
         :param excs: Dict of Jobs that generated an exception while running;
-          keys are Job class instances and values are the Exceptions caught
-          while running.
+          keys are Job class instances and values are 2-tuples of the caught
+          Exception objects and string formatted tracebacks.
         :type excs: dict
         :param start_dt: datetime instance when run was started
         :type start_dt: datetime.datetime
@@ -116,8 +116,8 @@ class Reporter(object):
         :param unfinished: Unfinished (timed-out) Job instances.
         :type unfinished: list
         :param excs: Dict of Jobs that generated an exception while running;
-          keys are Job class instances and values are the Exceptions caught
-          while running.
+          keys are Job class instances and values are 2-tuples of the caught
+          Exception objects and string formatted tracebacks.
         :type excs: dict
         :param start_dt: datetime instance when run was started
         :type start_dt: datetime.datetime
@@ -164,8 +164,9 @@ class Reporter(object):
 
         :param job: the Job to generate a div for
         :type job: ecsjobs.jobs.base.Job
-        :param exc: Exception caught when running job, or None
-        :type exc: ``Exception`` or ``None``
+        :param exc: None or 2-tuple of Exception caught when running job and
+          traceback formatted as a string.
+        :type exc: ``2-tuple`` or ``None``
         :param unfinished: whether or not the job was killed before being
           finished.
         :type unfinished: bool
@@ -186,7 +187,9 @@ class Reporter(object):
         elif exc is not None:
             res += self.td('Exception')
             res += self.td(job.duration)
-            res += self.td(escape('%s: %s' % (exc.__class__.__name__, exc)))
+            res += self.td(
+                escape('%s: %s' % (exc[0].__class__.__name__, exc[0]))
+            )
         else:
             res += self.td(job.exitcode)
             res += self.td(job.duration)
@@ -213,9 +216,8 @@ class Reporter(object):
             job.name, job.name, escape(str(job.report_description()))
         )
         if exc is not None:
-            res += '<pre>%s\n\n%s: %s</pre>' % (
-                escape(job.error_repr), escape(exc.__class__.__name__),
-                escape(str(exc))
+            res += '<pre>%s\n\n%s</pre>' % (
+                escape(job.error_repr), escape(exc[1])
             )
         elif unfinished:
             res += '<pre>%s</pre>\n<strong>JOB NOT FINISHED.</strong>' \

@@ -41,6 +41,7 @@ import logging
 from copy import copy
 from time import sleep
 from datetime import datetime, timedelta
+from traceback import format_exc
 
 from ecsjobs.version import VERSION, PROJECT_URL
 from ecsjobs.config import Config
@@ -94,7 +95,7 @@ class EcsJobsRunner(object):
             except Exception as ex:
                 logger.error('Job %s failed to run:\n%s', j, j.error_repr,
                              exc_info=True)
-                self._run_exceptions[j] = ex
+                self._run_exceptions[j] = (ex, format_exc())
                 self._finished.append(j)
                 continue
             if res is None:

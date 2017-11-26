@@ -79,7 +79,7 @@ class Job(object):
         self._schedule_name = schedule
         self._started = False
         self._finished = False
-        self._exit_code = -1
+        self._exit_code = None
         self._output = None
         self._start_time = None
         self._finish_time = None
@@ -98,10 +98,13 @@ class Job(object):
         :return: detailed representation of job in case of error
         :rtype: str
         """
+        ecode = ''
+        if self._exit_code is not None:
+            ecode = 'Exit Code: %s\n' % self._exit_code
         return "%s\nSchedule Name: %s\nStarted: %s\nFinished: %s\n" \
-               "Duration: %s\nExit Code: %s\nOutput: %s\n" % (
+               "Duration: %s\n%sOutput: %s\n" % (
                    self.__repr__(), self._schedule_name, self._started,
-                   self._finished, self.duration, self._exit_code, self._output
+                   self._finished, self.duration, ecode, self._output
                )
 
     @property

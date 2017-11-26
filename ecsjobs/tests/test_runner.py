@@ -281,10 +281,12 @@ class TestEcsJobsRunner(object):
         self.cls._run_exceptions['foo'] = 6
         with patch('%s._poll_jobs' % pb, autospec=True) as mock_poll:
             with patch('%s._report' % pb, autospec=True) as mock_report:
-                self.cls.run_schedules(['foo', 'bar'])
+                with patch('%s.format_exc' % pbm) as m_fmt_exc:
+                    m_fmt_exc.return_value = 'm_traceback'
+                    self.cls.run_schedules(['foo', 'bar'])
         assert self.cls._finished == [j1, j3, j4]
         assert self.cls._running == [j2]
-        assert self.cls._run_exceptions == {j4: exc}
+        assert self.cls._run_exceptions == {j4: (exc, 'm_traceback')}
         assert mock_poll.mock_calls == [call(self.cls)]
         assert mock_report.mock_calls == [call(self.cls)]
         assert self.config.jobs_for_schedules.mock_calls == [
@@ -294,6 +296,7 @@ class TestEcsJobsRunner(object):
         assert j2.mock_calls == [call.run()]
         assert j3.mock_calls == [call.run()]
         assert j4.mock_calls == [call.run()]
+        assert m_fmt_exc.mock_calls == [call()]
 
     @freeze_time('2017-10-20 12:30:00')
     def test_run_schedules_timeout(self):
@@ -320,7 +323,9 @@ class TestEcsJobsRunner(object):
         with patch('%s._poll_jobs' % pb, autospec=True) as mock_poll:
             with patch('%s._report' % pb, autospec=True) as mock_report:
                 with patch('%s.logger' % pbm) as mock_logger:
-                    self.cls.run_schedules(['foo', 'bar'])
+                    with patch('%s.format_exc' % pbm) as m_fmt_exc:
+                        m_fmt_exc.return_value = 'm_traceback'
+                        self.cls.run_schedules(['foo', 'bar'])
         assert self.cls._finished == [j1]
         assert self.cls._running == [j2, j3, j4]
         assert self.cls._run_exceptions == {}
@@ -336,6 +341,7 @@ class TestEcsJobsRunner(object):
         assert call.error(
             'Time limit reached; not running any more jobs!'
         ) in mock_logger.mock_calls
+        assert m_fmt_exc.mock_calls == []
 
     @freeze_time('2017-10-20 12:30:00')
     def test_poll_jobs(self):

@@ -386,7 +386,7 @@ class TestTrForJob(ReportTester):
 
         with patch('%s.td' % pb, autospec=True) as mock_td:
             mock_td.side_effect = se_td
-            res = self.cls._tr_for_job(j, exc=RuntimeError('foo'))
+            res = self.cls._tr_for_job(j, exc=(RuntimeError('foo'), 'tb'))
         assert res == expected
 
 
@@ -432,6 +432,7 @@ class TestDivForJob(ReportTester):
         j.summary.return_value = 'summary'
         j.report_description.return_value = 'Job Description'
         expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
-                   'Job Description</p><pre>erpr\n\nRuntimeError: foo</pre>' \
+                   'Job Description</p><pre>erpr\n\ntb</pre>' \
                    '</div>' + "\n"
-        assert self.cls._div_for_job(j, exc=RuntimeError('foo')) == expected
+        assert self.cls._div_for_job(
+            j, exc=(RuntimeError('foo'), 'tb')) == expected

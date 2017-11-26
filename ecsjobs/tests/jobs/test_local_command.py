@@ -59,6 +59,7 @@ class TestLocalCommand(object):
         assert cls._script_source is None
         assert cls._summary_regex is None
         assert cls._command == 'foo'
+        assert cls._exit_code is None
 
     def test_init_all_options(self):
         cls = LocalCommand(
@@ -72,6 +73,7 @@ class TestLocalCommand(object):
         assert cls._timeout == 23
         assert cls._script_source is None
         assert cls._summary_regex == 'foo'
+        assert cls._exit_code is None
 
     def test_init_no_cmd_or_script(self):
         with pytest.raises(RuntimeError):
@@ -190,7 +192,7 @@ class TestLocalCommandRun(object):
                         m_gs.return_value = '/my/temp/file'
                         with pytest.raises(subprocess.TimeoutExpired):
                             self.cls.run()
-        assert self.cls._exit_code == -1
+        assert self.cls._exit_code is None
         assert self.cls._output == "foo"
         assert self.cls._finished is True
         assert self.cls._started is True
@@ -230,7 +232,7 @@ class TestLocalCommandRun(object):
                         m_gs.return_value = '/my/temp/file'
                         with pytest.raises(subprocess.TimeoutExpired):
                             self.cls.run()
-        assert self.cls._exit_code == -1
+        assert self.cls._exit_code is None
         assert self.cls._output == "foo"
         assert self.cls._finished is True
         assert self.cls._started is True
@@ -279,7 +281,7 @@ class TestLocalCommandGetScript(object):
     def test_boto(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
+        assert self.cls.exitcode is None
         assert self.cls.output is None
 
         m_client = Mock()
@@ -306,7 +308,7 @@ class TestLocalCommandGetScript(object):
         assert res == '/tmp/tmpfile'
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
+        assert self.cls.exitcode is None
         assert self.cls.output is None
         assert mocks['boto3'].mock_calls == [
             call.client('s3'),
@@ -331,7 +333,7 @@ class TestLocalCommandGetScript(object):
     def test_http(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
+        assert self.cls.exitcode is None
         assert self.cls.output is None
 
         m_resp = Mock()
@@ -354,7 +356,7 @@ class TestLocalCommandGetScript(object):
         assert res == '/tmp/tmpfile'
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
+        assert self.cls.exitcode is None
         assert self.cls.output is None
         assert mocks['boto3'].mock_calls == []
         assert mocks['requests'].mock_calls == [
@@ -375,7 +377,7 @@ class TestLocalCommandGetScript(object):
     def test_unsupported_url(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
+        assert self.cls.exitcode is None
         assert self.cls.output is None
         with patch.multiple(
             pbm,
