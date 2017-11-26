@@ -43,6 +43,7 @@ with open('README.rst') as file:
 
 requires = [
     'boto3>=1.0.0,<2.0.0',
+    'cronex==0.1.0',
     'docker>=2.0.0,<3.0.0',
     'jsonschema>=2.0.0,<3.0.0',
     'PyYAML>=3.0,<4.0',
