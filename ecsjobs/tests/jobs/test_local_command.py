@@ -38,6 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import subprocess
 from datetime import datetime
 from unittest.mock import Mock, patch, call, DEFAULT, PropertyMock
+from stat import S_IRUSR, S_IWUSR, S_IXUSR
 
 import pytest
 from freezegun import freeze_time
@@ -322,7 +323,7 @@ class TestLocalCommandGetScript(object):
             call('ecsjobs-jname')
         ]
         assert mocks['chmod'].mock_calls == [
-            call('/tmp/tmpfile', 700)
+            call('/tmp/tmpfile', S_IRUSR | S_IWUSR | S_IXUSR)
         ]
         assert mocks['fdopen'].mock_calls == [
             call(m_fd, 'w'),
@@ -366,7 +367,7 @@ class TestLocalCommandGetScript(object):
             call('ecsjobs-jname')
         ]
         assert mocks['chmod'].mock_calls == [
-            call('/tmp/tmpfile', 700)
+            call('/tmp/tmpfile', S_IRUSR | S_IWUSR | S_IXUSR)
         ]
         assert mocks['fdopen'].mock_calls == [
             call(m_fd, 'w'),

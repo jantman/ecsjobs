@@ -37,6 +37,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 
 import abc  # noqa
 from os import unlink, fdopen, chmod
+from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from datetime import datetime
 from ecsjobs.jobs.base import Job
 import logging
@@ -211,5 +212,5 @@ class LocalCommand(Job):
         fh = fdopen(fd, 'w')
         fh.write(content)
         fh.close()
-        chmod(path, 700)
+        chmod(path, S_IRUSR | S_IWUSR | S_IXUSR)
         return path
