@@ -5,6 +5,9 @@ ecsjobs
    :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
    :target: http://www.repostatus.org/#wip
 
+* Documentation: `http://ecsjobs.readthedocs.io/en/latest/ <http://ecsjobs.readthedocs.io/en/latest/>`_
+* Builds: `https://travis-ci.org/jantman/ecsjobs <https://travis-ci.org/jantman/ecsjobs>`_
+
 A scheduled job wrapper for ECS, focused on email reporting and adding docker exec and local command abilities.
 
 This is a very, very esoteric project with a really niche use case.
