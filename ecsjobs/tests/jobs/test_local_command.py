@@ -51,13 +51,14 @@ pb = '%s.LocalCommand' % pbm
 class TestLocalCommand(object):
 
     def test_init(self):
-        cls = LocalCommand('jname', 'sname')
+        cls = LocalCommand('jname', 'sname', command='foo')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._shell is False
         assert cls._timeout is None
         assert cls._script_source is None
         assert cls._summary_regex is None
+        assert cls._command == 'foo'
 
     def test_init_all_options(self):
         cls = LocalCommand(
@@ -71,6 +72,10 @@ class TestLocalCommand(object):
         assert cls._timeout == 23
         assert cls._script_source is None
         assert cls._summary_regex == 'foo'
+
+    def test_init_no_cmd_or_script(self):
+        with pytest.raises(RuntimeError):
+            LocalCommand('jname', 'sname')
 
 
 class TestLocalCommandRun(object):
@@ -186,9 +191,7 @@ class TestLocalCommandRun(object):
                         with pytest.raises(subprocess.TimeoutExpired):
                             self.cls.run()
         assert self.cls._exit_code == -1
-        assert self.cls._output == "foo\nTimeoutExpired: Command " \
-                                   "'['/usr/bin/cmd', '-h']' timed out after " \
-                                   "120 seconds"
+        assert self.cls._output == "foo"
         assert self.cls._finished is True
         assert self.cls._started is True
         assert self.cls._start_time == initial_dt
@@ -228,9 +231,7 @@ class TestLocalCommandRun(object):
                         with pytest.raises(subprocess.TimeoutExpired):
                             self.cls.run()
         assert self.cls._exit_code == -1
-        assert self.cls._output == "foo\nTimeoutExpired: Command " \
-                                   "'['/usr/bin/cmd', '-h']' timed out after " \
-                                   "120 seconds"
+        assert self.cls._output == "foo"
         assert self.cls._finished is True
         assert self.cls._started is True
         assert self.cls._start_time == initial_dt
@@ -260,6 +261,10 @@ class TestLocalCommandReportDescription(object):
 
     def test_report_description(self):
         assert self.cls.report_description() == ['/usr/bin/cmd', '-h']
+
+    def test_report_description_script_source(self):
+        self.cls._script_source = 'http://foo'
+        assert self.cls.report_description() == 'http://foo'
 
 
 class TestLocalCommandGetScript(object):
@@ -292,8 +297,7 @@ class TestLocalCommandGetScript(object):
                 'requests': DEFAULT,
                 'mkstemp': DEFAULT,
                 'chmod': DEFAULT,
-                'fdopen': DEFAULT,
-                'close': DEFAULT
+                'fdopen': DEFAULT
             }
         ) as mocks:
             mocks['boto3'].client.return_value = m_client
@@ -319,12 +323,9 @@ class TestLocalCommandGetScript(object):
             call('/tmp/tmpfile', 700)
         ]
         assert mocks['fdopen'].mock_calls == [
-            call(m_fd),
+            call(m_fd, 'w'),
             call().write('myContent'),
             call().close()
-        ]
-        assert mocks['close'].mock_calls == [
-            call(m_fd)
         ]
 
     def test_http(self):
@@ -344,8 +345,7 @@ class TestLocalCommandGetScript(object):
                 'requests': DEFAULT,
                 'mkstemp': DEFAULT,
                 'chmod': DEFAULT,
-                'fdopen': DEFAULT,
-                'close': DEFAULT
+                'fdopen': DEFAULT
             }
         ) as mocks:
             mocks['requests'].get.return_value = m_resp
@@ -367,12 +367,9 @@ class TestLocalCommandGetScript(object):
             call('/tmp/tmpfile', 700)
         ]
         assert mocks['fdopen'].mock_calls == [
-            call(m_fd),
+            call(m_fd, 'w'),
             call().write('foobar'),
             call().close()
-        ]
-        assert mocks['close'].mock_calls == [
-            call(m_fd)
         ]
 
     def test_unsupported_url(self):
@@ -387,8 +384,7 @@ class TestLocalCommandGetScript(object):
                 'requests': DEFAULT,
                 'mkstemp': DEFAULT,
                 'chmod': DEFAULT,
-                'fdopen': DEFAULT,
-                'close': DEFAULT
+                'fdopen': DEFAULT
             }
         ) as mocks:
             with pytest.raises(RuntimeError) as exc:
@@ -399,4 +395,3 @@ class TestLocalCommandGetScript(object):
         assert mocks['mkstemp'].mock_calls == []
         assert mocks['chmod'].mock_calls == []
         assert mocks['fdopen'].mock_calls == []
-        assert mocks['close'].mock_calls == []

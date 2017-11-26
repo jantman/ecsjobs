@@ -36,7 +36,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 import abc  # noqa
-from os import unlink, fdopen, close, chmod
+from os import unlink, fdopen, chmod
 from datetime import datetime
 from ecsjobs.jobs.base import Job
 import logging
@@ -60,8 +60,7 @@ class LocalCommand(Job):
                         'type': 'array',
                         'items': [
                             {'type': 'string'}
-                        ],
-                        'additionalItems': False
+                        ]
                     }
                 ]
             },
@@ -77,10 +76,7 @@ class LocalCommand(Job):
                 'format': 'url',
                 'pattern': '^(s3|http|https)://.*$'
             }
-        },
-        'required': [
-            'command'
-        ]
+        }
     }
 
     def __init__(self, name, schedule, summary_regex=None, command=None,
@@ -128,6 +124,11 @@ class LocalCommand(Job):
         self._shell = shell
         self._timeout = timeout
         self._script_source = script_source
+        if command is None and script_source is None:
+            raise RuntimeError(
+                'LocalCommand must have either "command" or "script_source" '
+                'specified.'
+            )
 
     def run(self):
         """
@@ -156,9 +157,7 @@ class LocalCommand(Job):
         except subprocess.TimeoutExpired as exc:
             logger.warning('LocalCommand %s timed out after %s seconds',
                            self.name, exc.timeout)
-            self._output = exc.output.decode() + "\n%s: %s" % (
-                exc.__class__.__name__, str(exc)
-            )
+            self._output = exc.output.decode()
             raise
         finally:
             self._finished = True
@@ -173,6 +172,8 @@ class LocalCommand(Job):
 
         :rtype: str
         """
+        if self._script_source is not None:
+            return self._script_source
         return self._command
 
     def _get_script(self, script_url):
@@ -207,9 +208,8 @@ class LocalCommand(Job):
             raise RuntimeError('Error: unsupported URL scheme: %s' % script_url)
         fd, path = mkstemp('ecsjobs-%s' % self.name)
         logger.info('Writing script for %s to: %s', self.name, path)
-        fh = fdopen(fd)
+        fh = fdopen(fd, 'w')
         fh.write(content)
         fh.close()
-        close(fd)
         chmod(path, 700)
         return path
