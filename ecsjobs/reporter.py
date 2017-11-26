@@ -39,6 +39,7 @@ import logging
 from getpass import getuser
 from socket import gethostname
 from datetime import datetime
+from html import escape
 
 import boto3
 
@@ -185,11 +186,11 @@ class Reporter(object):
         elif exc is not None:
             res += self.td('Exception')
             res += self.td(job.duration)
-            res += self.td('%s: %s' % (exc.__class__.__name__, exc))
+            res += self.td(escape('%s: %s' % (exc.__class__.__name__, exc)))
         else:
             res += self.td(job.exitcode)
             res += self.td(job.duration)
-            res += self.td(job.summary())
+            res += self.td(escape(job.summary()))
         res += '</tr>' + "\n"
         return res
 
@@ -209,11 +210,17 @@ class Reporter(object):
         :rtype: str
         """
         res = '<div><p><strong><a name="%s">%s</a></strong> - %s</p>' % (
-            job.name, job.name, job.report_description()
+            job.name, job.name, escape(str(job.report_description()))
         )
         if exc is not None:
-            res += '<pre>%s\n\n%s</pre>' % (job.error_repr, exc)
+            res += '<pre>%s\n\n%s: %s</pre>' % (
+                escape(job.error_repr), escape(exc.__class__.__name__),
+                escape(str(exc))
+            )
+        elif unfinished:
+            res += '<pre>%s</pre>\n<strong>JOB NOT FINISHED.</strong>' \
+                   '' % escape(job.error_repr)
         else:
-            res += '<pre>%s</pre>' % job.output
+            res += '<pre>%s</pre>' % escape(job.output)
         res += '</div>' + "\n"
         return res

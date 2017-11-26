@@ -406,6 +406,21 @@ class TestDivForJob(ReportTester):
                    'Job Description</p><pre>jobOutput</pre></div>' + "\n"
         assert self.cls._div_for_job(j) == expected
 
+    def test_unfinished(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=0)
+        type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
+        type(j).is_finished = PropertyMock(return_value=True)
+        type(j).error_repr = PropertyMock(return_value='erpr')
+        type(j).output = PropertyMock(return_value='jobOutput')
+        j.summary.return_value = 'summary'
+        j.report_description.return_value = 'Job Description'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
+                   'Job Description</p><pre>erpr</pre>\n<strong>JOB ' \
+                   'NOT FINISHED.</strong></div>' + "\n"
+        assert self.cls._div_for_job(j, unfinished=True) == expected
+
     def test_exc(self):
         j = Mock(spec_set=Job)
         type(j).name = PropertyMock(return_value='myjob')
@@ -417,5 +432,6 @@ class TestDivForJob(ReportTester):
         j.summary.return_value = 'summary'
         j.report_description.return_value = 'Job Description'
         expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
-                   'Job Description</p><pre>erpr\n\nfoo</pre></div>' + "\n"
-        assert self.cls._div_for_job(j, exc='foo') == expected
+                   'Job Description</p><pre>erpr\n\nRuntimeError: foo</pre>' \
+                   '</div>' + "\n"
+        assert self.cls._div_for_job(j, exc=RuntimeError('foo')) == expected
