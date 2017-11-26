@@ -63,4 +63,8 @@ class EcsTask(Job):
         super(EcsTask, self).__init__(
             name, schedule, summary_regex=summary_regex
         )
+        self._ecs = None
+
+    def run(self):
         self._ecs = boto3.client('ecs')
+        raise NotImplementedError()

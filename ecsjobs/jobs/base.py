@@ -43,15 +43,6 @@ logger = logging.getLogger(__name__)
 
 
 class Job(object):
-    """
-    Base class for all Job types/classes.
-
-    Required configuration:
-
-    * **name** - A unique name for the job.
-    * **class_name** - The name of a :py:class:`ecsjobs.jobs.base.Job` subclass.
-    * **schedule** - A string to identify which jobs to run at which times.
-    """
 
     __metaclass__ = abc.ABCMeta
 
@@ -73,7 +64,7 @@ class Job(object):
 
     def __init__(self, name, schedule, summary_regex=None):
         """
-        Initialize a Job object.
+        Base class for all Job types/classes.
 
         :param name: unique name for this job
         :type name: str
@@ -234,6 +225,9 @@ class Job(object):
         runs synchronously, this method also sets ``self._finished``,
         ``self._exit_code``, ``self._finish_time`` and ``self._output``.
 
+        In the case of an exception, this method must still set those attributes
+        as appropriate and then raise the exception.
+
         :return: True if job finished successfully, False if job finished but
           failed, or None if the job is still running in the background.
         """
@@ -245,9 +239,15 @@ class Job(object):
         """
         For asynchronous jobs (:py:attr:`~.is_started` is True but
         :py:attr:`~.is_finished` is False), check if the job has finished yet.
-        If not, return :py:attr:`~.is_finished`. If the job has finished, update
+        If not, return ``False``. If the job has finished, update
         ``self._finish_time``, ``self._exit_code``, ``self._output`` and
-        ``self._finished`` and then return :py:attr:`~.is_finished`.
+        ``self._finished`` and then return ``True``.
+
+        This method should **never** raise exceptions; recoverable exceptions
+        should be handled via internal retry logic on subsequent poll attempts.
+        Retries should be done on the next call of this method; we never want
+        to sleep during this method. Unrecoverable exceptions should set
+        ``self._exit_code``, ``self._output`` and ``self._finished``.
 
         :return: :py:attr:`~.is_finished`
         :rtype: bool

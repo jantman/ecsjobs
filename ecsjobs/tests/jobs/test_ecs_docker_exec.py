@@ -46,25 +46,17 @@ pb = '%s.EcsDockerExec' % pbm
 class TestEcsDockerExecInit(object):
 
     def test_init(self):
-        with patch('%s.docker' % pbm, autospec=True) as m_docker:
-            with patch('%s.boto3' % pbm, autospec=True) as m_boto:
-                cls = EcsDockerExec('jname', 'sname')
+        cls = EcsDockerExec('jname', 'sname')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex is None
-        assert m_docker.mock_calls == [call.from_env()]
-        assert cls._docker == m_docker.from_env.return_value
-        assert m_boto.mock_calls == [call.client('ecs')]
-        assert cls._ecs == m_boto.client.return_value
+        assert cls._docker is None
+        assert cls._ecs is None
 
     def test_init_all_options(self):
-        with patch('%s.docker' % pbm, autospec=True) as m_docker:
-            with patch('%s.boto3' % pbm, autospec=True) as m_boto:
-                cls = EcsDockerExec('jname', 'sname', summary_regex='foo')
+        cls = EcsDockerExec('jname', 'sname', summary_regex='foo')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex == 'foo'
-        assert m_docker.mock_calls == [call.from_env()]
-        assert cls._docker == m_docker.from_env.return_value
-        assert m_boto.mock_calls == [call.client('ecs')]
-        assert cls._ecs == m_boto.client.return_value
+        assert cls._docker is None
+        assert cls._ecs is None

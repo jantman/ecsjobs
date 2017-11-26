@@ -49,12 +49,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalCommand(Job):
-    """
-    Job class to run a local command via :py:func:`subprocess.run`. The
-    :py:attr:`~.output` property of this class contains combined STDOUT and
-    STDERR. If the ``timeout`` configuration option is set,
-    :py:attr:`~.exitcode` will be set to -2 if a timeout occurs.
-    """
 
     _schema_dict = {
         'type': 'object',
@@ -92,7 +86,9 @@ class LocalCommand(Job):
     def __init__(self, name, schedule, summary_regex=None, command=None,
                  shell=False, timeout=None, script_source=None):
         """
-        Initialize a LocalCommand object.
+        Job class to run a local command via :py:func:`subprocess.run`. The
+        :py:attr:`~.output` property of this class contains combined STDOUT and
+        STDERR.
 
         :param name: unique name for this job
         :type name: str
@@ -132,21 +128,16 @@ class LocalCommand(Job):
         self._shell = shell
         self._timeout = timeout
         self._script_source = script_source
-        if self._script_source is not None:
-            self._command = self._get_script(self._script_source)
 
     def run(self):
         """
-        Run the job.
-
-        This method sets ``self._started``, ``self._finished``,
-        ``self._start_time``, ``self._finish_time``, ``self._exit_code`` and
-        ``self._output``.
+        Run the command for the job. Either raise an exception or return
+        True if the command exited 0, False if it exited non-zero.
 
         :return: True if command exited 0, False otherwise.
         """
-        if self._finished is True:
-            return self._exit_code == 0
+        if self._script_source is not None:
+            self._command = self._get_script(self._script_source)
         logger.debug('Job %s: Running command %s shell=%s timeout=%s',
                      self.name, self._command, self._shell, self._timeout)
         try:
@@ -159,20 +150,21 @@ class LocalCommand(Job):
                 shell=self._shell,
                 timeout=self._timeout
             )
-            self._finished = True
-            self._finish_time = datetime.now()
             self._exit_code = s.returncode
             self._output = s.stdout.decode()
             logger.debug('Job %s: command finished.', self.name)
         except subprocess.TimeoutExpired as exc:
-            self._finished = True
-            self._finish_time = datetime.now()
             logger.warning('LocalCommand %s timed out after %s seconds',
                            self.name, exc.timeout)
-            self._exit_code = -2
-            self._output = exc.output.decode()
-        if self._script_source is not None:
-            unlink(self._command)
+            self._output = exc.output.decode() + "\n%s: %s" % (
+                exc.__class__.__name__, str(exc)
+            )
+            raise
+        finally:
+            self._finished = True
+            self._finish_time = datetime.now()
+            if self._script_source is not None:
+                unlink(self._command)
         return self._exit_code == 0
 
     def report_description(self):
@@ -196,44 +188,23 @@ class LocalCommand(Job):
         if script_url.startswith('s3://'):
             url = script_url[5:]
             bkt, key = url.split('/', 1)
-            try:
-                logger.debug(
-                    'Retrieving script for %s from S3; bucket=%s key=%s',
-                    self.name, bkt, key
-                )
-                s3 = boto3.client('s3')
-                content = s3.get_object(
-                    Bucket=bkt,
-                    Key=key
-                )['Body'].read()
-                logger.debug('Got script:\n%s', content)
-            except Exception as ex:
-                logger.error('Error downloading %s', script_url, exc_info=True)
-                self._finished = True
-                self._started = True
-                self._exit_code = -3
-                self._output = 'Error downloading %s:\n%s' % (script_url, ex)
-                return None
+            logger.debug(
+                'Retrieving script for %s from S3; bucket=%s key=%s',
+                self.name, bkt, key
+            )
+            s3 = boto3.client('s3')
+            content = s3.get_object(
+                Bucket=bkt,
+                Key=key
+            )['Body'].read()
+            logger.debug('Got script:\n%s', content)
         elif script_url.startswith('http'):
-            try:
-                logger.debug('Retrieving script for %s from: %s', self.name,
-                             script_url)
-                content = requests.get(script_url).text
-                logger.debug('Got script:\n%s', content)
-            except Exception as ex:
-                logger.error('Error downloading %s', script_url, exc_info=True)
-                self._finished = True
-                self._started = True
-                self._exit_code = -3
-                self._output = 'Error downloading %s:\n%s' % (script_url, ex)
-                return None
+            logger.debug('Retrieving script for %s from: %s', self.name,
+                         script_url)
+            content = requests.get(script_url).text
+            logger.debug('Got script:\n%s', content)
         else:
-            logger.error('Error: unsupported URL scheme: %s', script_url)
-            self._finished = True
-            self._started = True
-            self._exit_code = -3
-            self._output = 'Error: unsupported URL scheme: %s' % script_url
-            return None
+            raise RuntimeError('Error: unsupported URL scheme: %s' % script_url)
         fd, path = mkstemp('ecsjobs-%s' % self.name)
         logger.info('Writing script for %s to: %s', self.name, path)
         fh = fdopen(fd)

@@ -46,19 +46,15 @@ pb = '%s.DockerExec' % pbm
 class TestDockerExecInit(object):
 
     def test_init(self):
-        with patch('%s.docker' % pbm, autospec=True) as m_docker:
-            cls = DockerExec('jname', 'sname')
+        cls = DockerExec('jname', 'sname')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex is None
-        assert m_docker.mock_calls == [call.from_env()]
-        assert cls._docker == m_docker.from_env.return_value
+        assert cls._docker is None
 
     def test_init_all_options(self):
-        with patch('%s.docker' % pbm, autospec=True) as m_docker:
-            cls = DockerExec('jname', 'sname', summary_regex='foo')
+        cls = DockerExec('jname', 'sname', summary_regex='foo')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex == 'foo'
-        assert m_docker.mock_calls == [call.from_env()]
-        assert cls._docker == m_docker.from_env.return_value
+        assert cls._docker is None

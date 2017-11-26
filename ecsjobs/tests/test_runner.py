@@ -322,7 +322,7 @@ class TestEcsJobsRunner(object):
                 with patch('%s.logger' % pbm) as mock_logger:
                     self.cls.run_schedules(['foo', 'bar'])
         assert self.cls._finished == [j1]
-        assert self.cls._running == [j2]
+        assert self.cls._running == [j2, j3, j4]
         assert self.cls._run_exceptions == {}
         assert mock_poll.mock_calls == [call(self.cls)]
         assert mock_report.mock_calls == [call(self.cls)]

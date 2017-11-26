@@ -39,6 +39,7 @@ import subprocess
 from datetime import datetime
 from unittest.mock import Mock, patch, call, DEFAULT, PropertyMock
 
+import pytest
 from freezegun import freeze_time
 
 from ecsjobs.jobs.local_command import LocalCommand
@@ -50,35 +51,19 @@ pb = '%s.LocalCommand' % pbm
 class TestLocalCommand(object):
 
     def test_init(self):
-        with patch('%s._get_script' % pb, autospec=True) as m_gs:
-            cls = LocalCommand('jname', 'sname')
+        cls = LocalCommand('jname', 'sname')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._shell is False
         assert cls._timeout is None
         assert cls._script_source is None
         assert cls._summary_regex is None
-        assert m_gs.mock_calls == []
-
-    def test_init_script_source(self):
-        with patch('%s._get_script' % pb, autospec=True) as m_gs:
-            m_gs.return_value = '/my/temp/file'
-            cls = LocalCommand('jname', 'sname', script_source='foo')
-        assert cls.name == 'jname'
-        assert cls.schedule_name == 'sname'
-        assert cls._command == '/my/temp/file'
-        assert cls._shell is False
-        assert cls._timeout is None
-        assert cls._script_source == 'foo'
-        assert cls._summary_regex is None
-        assert m_gs.mock_calls == [call(cls, 'foo')]
 
     def test_init_all_options(self):
-        with patch('%s._get_script' % pb, autospec=True) as m_gs:
-            cls = LocalCommand(
-                'jname', 'sname', summary_regex='foo', command='/bin/bar',
-                shell=True, timeout=23
-            )
+        cls = LocalCommand(
+            'jname', 'sname', summary_regex='foo', command='/bin/bar',
+            shell=True, timeout=23
+        )
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._command == '/bin/bar'
@@ -86,7 +71,6 @@ class TestLocalCommand(object):
         assert cls._timeout == 23
         assert cls._script_source is None
         assert cls._summary_regex == 'foo'
-        assert m_gs.mock_calls == []
 
 
 class TestLocalCommandRun(object):
@@ -116,7 +100,9 @@ class TestLocalCommandRun(object):
             with patch('%s.subprocess.run' % pbm) as m_run:
                 m_run.side_effect = se_run
                 with patch('%s.unlink' % pbm) as m_unlink:
-                    res = self.cls.run()
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = '/my/temp/file'
+                        res = self.cls.run()
         assert res is True
         assert self.cls._exit_code == 0
         assert self.cls._output == 'hello'
@@ -125,6 +111,16 @@ class TestLocalCommandRun(object):
         assert self.cls._start_time == initial_dt
         assert self.cls._finish_time == self.second_dt
         assert m_unlink.mock_calls == []
+        assert m_gs.mock_calls == []
+        assert m_run.mock_calls == [
+            call(
+                ['/usr/bin/cmd', '-h'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
 
     def test_success_script(self):
         self.cls._script_source = 's3://foo/bar'
@@ -146,7 +142,9 @@ class TestLocalCommandRun(object):
             with patch('%s.subprocess.run' % pbm) as m_run:
                 m_run.side_effect = se_run
                 with patch('%s.unlink' % pbm) as m_unlink:
-                    res = self.cls.run()
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = '/my/temp/file'
+                        res = self.cls.run()
         assert res is True
         assert self.cls._exit_code == 0
         assert self.cls._output == 'hello'
@@ -154,7 +152,18 @@ class TestLocalCommandRun(object):
         assert self.cls._started is True
         assert self.cls._start_time == initial_dt
         assert self.cls._finish_time == self.second_dt
-        assert m_unlink.mock_calls == [call('/foo/bar')]
+        assert self.cls._command == '/my/temp/file'
+        assert m_unlink.mock_calls == [call('/my/temp/file')]
+        assert m_gs.mock_calls == [call(self.cls, 's3://foo/bar')]
+        assert m_run.mock_calls == [
+            call(
+                '/my/temp/file',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
 
     def test_timeout(self):
         self.frozen = None
@@ -172,15 +181,29 @@ class TestLocalCommandRun(object):
             with patch('%s.subprocess.run' % pbm) as m_run:
                 m_run.side_effect = se_run
                 with patch('%s.unlink' % pbm) as m_unlink:
-                    res = self.cls.run()
-        assert res is False
-        assert self.cls._exit_code == -2
-        assert self.cls._output == 'foo'
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = '/my/temp/file'
+                        with pytest.raises(subprocess.TimeoutExpired):
+                            self.cls.run()
+        assert self.cls._exit_code == -1
+        assert self.cls._output == "foo\nTimeoutExpired: Command " \
+                                   "'['/usr/bin/cmd', '-h']' timed out after " \
+                                   "120 seconds"
         assert self.cls._finished is True
         assert self.cls._started is True
         assert self.cls._start_time == initial_dt
         assert self.cls._finish_time == self.second_dt
         assert m_unlink.mock_calls == []
+        assert m_gs.mock_calls == []
+        assert m_run.mock_calls == [
+            call(
+                ['/usr/bin/cmd', '-h'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
 
     def test_timeout_script(self):
         self.cls._script_source = 's3://foo/bar'
@@ -200,27 +223,30 @@ class TestLocalCommandRun(object):
             with patch('%s.subprocess.run' % pbm) as m_run:
                 m_run.side_effect = se_run
                 with patch('%s.unlink' % pbm) as m_unlink:
-                    res = self.cls.run()
-        assert res is False
-        assert self.cls._exit_code == -2
-        assert self.cls._output == 'foo'
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = '/my/temp/file'
+                        with pytest.raises(subprocess.TimeoutExpired):
+                            self.cls.run()
+        assert self.cls._exit_code == -1
+        assert self.cls._output == "foo\nTimeoutExpired: Command " \
+                                   "'['/usr/bin/cmd', '-h']' timed out after " \
+                                   "120 seconds"
         assert self.cls._finished is True
         assert self.cls._started is True
         assert self.cls._start_time == initial_dt
         assert self.cls._finish_time == self.second_dt
-        assert m_unlink.mock_calls == [call('/foo/bar')]
-
-    def test_already_finished(self):
-        self.cls._finished = True
-        self.cls._exit_code = 0
-        self.cls._output = 'foo'
-        self.cls._started = True
-        res = self.cls.run()
-        assert res is True
-        assert self.cls._exit_code == 0
-        assert self.cls._output == 'foo'
-        assert self.cls._finished is True
-        assert self.cls._started is True
+        assert self.cls._command == '/my/temp/file'
+        assert m_unlink.mock_calls == [call('/my/temp/file')]
+        assert m_gs.mock_calls == [call(self.cls, 's3://foo/bar')]
+        assert m_run.mock_calls == [
+            call(
+                '/my/temp/file',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
 
 
 class TestLocalCommandReportDescription(object):
@@ -301,50 +327,6 @@ class TestLocalCommandGetScript(object):
             call(m_fd)
         ]
 
-    def test_boto_exception(self):
-        assert self.cls.is_started is False
-        assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
-        assert self.cls.output is None
-
-        m_client = Mock()
-        exc = RuntimeError('foo')
-        m_client.get_object.side_effect = exc
-        m_fd = Mock()
-
-        with patch.multiple(
-                pbm,
-                **{
-                    'boto3': DEFAULT,
-                    'requests': DEFAULT,
-                    'mkstemp': DEFAULT,
-                    'chmod': DEFAULT,
-                    'fdopen': DEFAULT,
-                    'close': DEFAULT
-                }
-        ) as mocks:
-            mocks['boto3'].client.return_value = m_client
-            mocks['mkstemp'].return_value = m_fd, '/tmp/tmpfile'
-            res = self.cls._get_script('s3://bktname/path/to/key')
-        assert res is None
-        assert self.cls.is_started is True
-        assert self.cls.is_finished is True
-        assert self.cls.exitcode == -3
-        assert self.cls.output == 'Error downloading s3://bktname/path/' \
-                                  'to/key:\n%s' % exc
-        assert mocks['boto3'].mock_calls == [
-            call.client('s3'),
-            call.client().get_object(Bucket='bktname', Key='path/to/key')
-        ]
-        assert m_client.mock_calls == [
-            call.get_object(Bucket='bktname', Key='path/to/key')
-        ]
-        assert mocks['requests'].mock_calls == []
-        assert mocks['mkstemp'].mock_calls == []
-        assert mocks['chmod'].mock_calls == []
-        assert mocks['fdopen'].mock_calls == []
-        assert mocks['close'].mock_calls == []
-
     def test_http(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
@@ -393,43 +375,6 @@ class TestLocalCommandGetScript(object):
             call(m_fd)
         ]
 
-    def test_http_exception(self):
-        assert self.cls.is_started is False
-        assert self.cls.is_finished is False
-        assert self.cls.exitcode == -1
-        assert self.cls.output is None
-
-        exc = RuntimeError('foo')
-        m_fd = Mock()
-
-        with patch.multiple(
-            pbm,
-            **{
-                'boto3': DEFAULT,
-                'requests': DEFAULT,
-                'mkstemp': DEFAULT,
-                'chmod': DEFAULT,
-                'fdopen': DEFAULT,
-                'close': DEFAULT
-            }
-        ) as mocks:
-            mocks['requests'].get.side_effect = exc
-            mocks['mkstemp'].return_value = m_fd, '/tmp/tmpfile'
-            res = self.cls._get_script('http://bar')
-        assert res is None
-        assert self.cls.is_started is True
-        assert self.cls.is_finished is True
-        assert self.cls.exitcode == -3
-        assert self.cls.output == 'Error downloading http://bar:\n%s' % exc
-        assert mocks['boto3'].mock_calls == []
-        assert mocks['requests'].mock_calls == [
-            call.get('http://bar')
-        ]
-        assert mocks['mkstemp'].mock_calls == []
-        assert mocks['chmod'].mock_calls == []
-        assert mocks['fdopen'].mock_calls == []
-        assert mocks['close'].mock_calls == []
-
     def test_unsupported_url(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
@@ -446,12 +391,9 @@ class TestLocalCommandGetScript(object):
                 'close': DEFAULT
             }
         ) as mocks:
-            res = self.cls._get_script('foo://bar')
-        assert res is None
-        assert self.cls.is_started is True
-        assert self.cls.is_finished is True
-        assert self.cls.exitcode == -3
-        assert self.cls.output == 'Error: unsupported URL scheme: foo://bar'
+            with pytest.raises(RuntimeError) as exc:
+                self.cls._get_script('foo://bar')
+        assert str(exc.value) == 'Error: unsupported URL scheme: foo://bar'
         assert mocks['boto3'].mock_calls == []
         assert mocks['requests'].mock_calls == []
         assert mocks['mkstemp'].mock_calls == []

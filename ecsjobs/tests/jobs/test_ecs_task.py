@@ -46,19 +46,15 @@ pb = '%s.EcsTask' % pbm
 class TestEcsTaskInit(object):
 
     def test_init(self):
-        with patch('%s.boto3' % pbm, autospec=True) as m_boto:
-            cls = EcsTask('jname', 'sname')
+        cls = EcsTask('jname', 'sname')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex is None
-        assert m_boto.mock_calls == [call.client('ecs')]
-        assert cls._ecs == m_boto.client.return_value
+        assert cls._ecs is None
 
     def test_init_all_options(self):
-        with patch('%s.boto3' % pbm, autospec=True) as m_boto:
-            cls = EcsTask('jname', 'sname', summary_regex='foo')
+        cls = EcsTask('jname', 'sname', summary_regex='foo')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex == 'foo'
-        assert m_boto.mock_calls == [call.client('ecs')]
-        assert cls._ecs == m_boto.client.return_value
+        assert cls._ecs is None

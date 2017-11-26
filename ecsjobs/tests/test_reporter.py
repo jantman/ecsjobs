@@ -353,7 +353,7 @@ class TestTrForJob(ReportTester):
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff944d;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
-                   '<td>0</td>' \
+                   '<td>Unfinished</td>' \
                    '<td>0:01:05</td>' \
                    '<td><em>Unfinished</em></td>' \
                    '</tr>' + "\n"
@@ -376,9 +376,9 @@ class TestTrForJob(ReportTester):
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
-                   '<td>0</td>' \
+                   '<td>Exception</td>' \
                    '<td>0:01:05</td>' \
-                   '<td><em>Exception</em></td>' \
+                   '<td>RuntimeError: foo</td>' \
                    '</tr>' + "\n"
 
         def se_td(cls, s):
@@ -386,7 +386,7 @@ class TestTrForJob(ReportTester):
 
         with patch('%s.td' % pb, autospec=True) as mock_td:
             mock_td.side_effect = se_td
-            res = self.cls._tr_for_job(j, exc=True)
+            res = self.cls._tr_for_job(j, exc=RuntimeError('foo'))
         assert res == expected
 
 

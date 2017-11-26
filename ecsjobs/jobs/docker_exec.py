@@ -63,4 +63,8 @@ class DockerExec(Job):
         super(DockerExec, self).__init__(
             name, schedule, summary_regex=summary_regex
         )
+        self._docker = None
+
+    def run(self):
         self._docker = docker.from_env()
+        raise NotImplementedError()

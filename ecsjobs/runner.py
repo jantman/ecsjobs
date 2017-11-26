@@ -86,7 +86,8 @@ class EcsJobsRunner(object):
             logger.debug('now=%s timeout=%s', datetime.now(), self._timeout)
             if datetime.now() >= self._timeout:
                 logger.error('Time limit reached; not running any more jobs!')
-                break
+                self._running.append(j)
+                continue
             try:
                 logger.debug('Running job: %s', j)
                 res = j.run()

@@ -64,5 +64,10 @@ class EcsDockerExec(Job):
         super(EcsDockerExec, self).__init__(
             name, schedule, summary_regex=summary_regex
         )
+        self._ecs = None
+        self._docker = None
+
+    def run(self):
         self._ecs = boto3.client('ecs')
         self._docker = docker.from_env()
+        raise NotImplementedError()

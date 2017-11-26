@@ -178,13 +178,17 @@ class Reporter(object):
             bg = '#ff944d'
         res = '<tr style="background-color: %s;">' % bg
         res += self.td('<a href="#%s">%s</a>' % (job.name, job.name))
-        res += self.td(job.exitcode)
-        res += self.td(job.duration)
         if unfinished:
+            res += self.td('Unfinished')
+            res += self.td(job.duration)
             res += self.td('<em>Unfinished</em>')
         elif exc is not None:
-            res += self.td('<em>Exception</em>')
+            res += self.td('Exception')
+            res += self.td(job.duration)
+            res += self.td('%s: %s' % (exc.__class__.__name__, exc))
         else:
+            res += self.td(job.exitcode)
+            res += self.td(job.duration)
             res += self.td(job.summary())
         res += '</tr>' + "\n"
         return res
