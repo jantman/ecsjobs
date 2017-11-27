@@ -33,7 +33,7 @@ jobs:
 - name: timeout
   class_name: LocalCommand
   schedule: foo
-  command: "echo 'foo' && sleep 10 && echo 'bar'"
+  command: "echo 'foo' && sleep 2 &&  echo 'bar' && sleep 2 && echo 'baz' && sleep 10 && echo 'blam'"
   timeout: 2
   shell: true
 - name: https_script_success

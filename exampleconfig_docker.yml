@@ -1,0 +1,26 @@
+global:
+  from_email: jason@jasonantman.com
+  to_email: jason@jasonantman.com
+jobs:
+- name: binTrue
+  class_name: DockerExec
+  schedule: foo
+  command: /bin/true
+  container_name: graphite
+- name: binFalse
+  class_name: DockerExec
+  schedule: foo
+  command: /bin/false
+  container_name: graphite
+- name: ps-aux
+  class_name: DockerExec
+  schedule: bar
+  command: ps -aux
+  summary_regex: .*manage\.py.*
+  container_name: graphite
+- name: should_skip
+  class_name: DockerExec
+  schedule: bar
+  command: "echo 'should be skipped'"
+  cron_expression: "1 1 1 1 1"
+  container_name: graphite

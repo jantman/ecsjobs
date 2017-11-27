@@ -292,7 +292,8 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'https://docs.python.org/3/': None,
-    'boto3': ('https://boto3.readthedocs.io/en/latest/', None)
+    'boto3': ('https://boto3.readthedocs.io/en/latest/', None),
+    'docker': ('https://docker-py.readthedocs.io/en/stable/', None)
 }
 
 autoclass_content = 'both'

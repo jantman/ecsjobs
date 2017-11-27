@@ -117,6 +117,8 @@ class TestValidateExamples(object):
         - name: jobOne
           class_name: DockerExec
           schedule: foo
+          container_name: myCont
+          command: /my/command
         - name: jobTwo
           class_name: LocalCommand
           schedule: foo
@@ -134,6 +136,8 @@ class TestValidateExamples(object):
         jobs:
         - name: jobOne
           class_name: DockerExec
+          container_name: myCont
+          command: /my/command
         - name: jobTwo
           class_name: LocalCommand
           schedule: foo

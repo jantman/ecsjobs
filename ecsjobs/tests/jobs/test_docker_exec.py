@@ -35,8 +35,8 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-from unittest.mock import patch, call
-
+from unittest.mock import patch, call, Mock, PropertyMock
+from freezegun import freeze_time
 from ecsjobs.jobs.docker_exec import DockerExec
 
 pbm = 'ecsjobs.jobs.docker_exec'
@@ -50,11 +50,127 @@ class TestDockerExecInit(object):
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex is None
+        assert cls._cron_expression is None
+        assert cls._container_name is None
+        assert cls._command is None
+        assert cls._tty is False
+        assert cls._stdout is True
+        assert cls._stderr is True
+        assert cls._privileged is False
+        assert cls._user == 'root'
+        assert cls._environment is None
         assert cls._docker is None
+        assert cls._container is None
 
+    @freeze_time('2017-11-23 12:32:53')
     def test_init_all_options(self):
-        cls = DockerExec('jname', 'sname', summary_regex='foo')
+        mock_cronex = Mock()
+        with patch('ecsjobs.jobs.base.CronExpression') as m_cronex:
+            m_cronex.return_value = mock_cronex
+            cls = DockerExec(
+                'jname',
+                'sname',
+                summary_regex='foo',
+                cron_expression='crex',
+                container_name='cname',
+                command='/my/command',
+                tty=True,
+                stdout=False,
+                stderr=False,
+                privileged=True,
+                user='uname',
+                environment={'ENV': 'var'}
+            )
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex == 'foo'
+        assert cls._cron_expression == mock_cronex
+        assert cls._container_name == 'cname'
+        assert cls._command == '/my/command'
+        assert cls._tty is True
+        assert cls._stdout is False
+        assert cls._stderr is False
+        assert cls._privileged is True
+        assert cls._user == 'uname'
+        assert cls._environment == {'ENV': 'var'}
         assert cls._docker is None
+        assert cls._container is None
+        assert m_cronex.mock_calls == [
+            call('crex'),
+            call().check_trigger((2017, 11, 23, 12, 32))
+        ]
+
+
+class TestDockerExec(object):
+
+    def setup(self):
+        self.cls = DockerExec(
+            'jname', 'sname',
+            container_name='contname',
+            command='/my/command'
+        )
+
+    def test_exit_zero(self):
+        with patch('%s._docker_run' % pb, autospec=True) as mock_docker_run:
+            self.cls._exit_code = 0
+            res = self.cls.run()
+        assert res is True
+        assert mock_docker_run.mock_calls == [call(self.cls)]
+
+    def test_exit_non_zero(self):
+        with patch('%s._docker_run' % pb, autospec=True) as mock_docker_run:
+            self.cls._exit_code = 24
+            res = self.cls.run()
+        assert res is False
+        assert mock_docker_run.mock_calls == [call(self.cls)]
+
+    def test_report_description(self):
+        assert self.cls.report_description() == 'contname: /my/command'
+
+    def test_error_repr(self):
+        self.cls._exit_code = 6
+        self.cls._container = Mock()
+        type(self.cls._container).short_id = PropertyMock(return_value='abcd12')
+        with patch(
+            '%s.duration' % pb, new_callable=PropertyMock
+        ) as mock_duration:
+            mock_duration.return_value = 'dstr'
+            res = self.cls.error_repr
+        expected = "%s\nSchedule Name: sname\nStarted: False\n" \
+                   "Finished: False\nDuration: dstr\nExit Code: 6\n" \
+                   "Container Name: contname\nContainer ID: abcd12\n" \
+                   "TTY: False\nPrivileged: False\nEnvironment: None\n" \
+                   "Output: None\n" % self.cls.__repr__()
+        assert res == expected
+
+    def test_error_repr_exitcode_none(self):
+        self.cls._exit_code = None
+        self.cls._container = Mock()
+        type(self.cls._container).short_id = PropertyMock(return_value='abcd12')
+        with patch(
+            '%s.duration' % pb, new_callable=PropertyMock
+        ) as mock_duration:
+            mock_duration.return_value = 'dstr'
+            res = self.cls.error_repr
+        expected = "%s\nSchedule Name: sname\nStarted: False\n" \
+                   "Finished: False\nDuration: dstr\n" \
+                   "Container Name: contname\nContainer ID: abcd12\n" \
+                   "TTY: False\nPrivileged: False\nEnvironment: None\n" \
+                   "Output: None\n" % self.cls.__repr__()
+        assert res == expected
+
+    def test_error_repr_no_container_id(self):
+        self.cls._exit_code = 6
+        self.cls._container = Mock()
+        del self.cls._container.short_id
+        with patch(
+            '%s.duration' % pb, new_callable=PropertyMock
+        ) as mock_duration:
+            mock_duration.return_value = 'dstr'
+            res = self.cls.error_repr
+        expected = "%s\nSchedule Name: sname\nStarted: False\n" \
+                   "Finished: False\nDuration: dstr\nExit Code: 6\n" \
+                   "Container Name: contname\n" \
+                   "TTY: False\nPrivileged: False\nEnvironment: None\n" \
+                   "Output: None\n" % self.cls.__repr__()
+        assert res == expected
