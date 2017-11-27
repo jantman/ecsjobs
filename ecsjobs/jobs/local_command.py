@@ -87,7 +87,8 @@ class LocalCommand(Job):
         }
     }
 
-    def __init__(self, name, schedule, summary_regex=None, command=None,
+    def __init__(self, name, schedule, summary_regex=None,
+                 cron_expression=None, command=None,
                  shell=False, timeout=None, script_source=None):
         """
         :param name: unique name for this job
@@ -98,6 +99,13 @@ class LocalCommand(Job):
           string from the job output for use in the summary table. If there is
           more than one match, the last one will be used.
         :type summary_regex: ``string`` or ``None``
+        :param cron_expression: A cron-like expression parsable by
+          `cronex <https://github.com/ericpruitt/cronex>`_ specifying when the
+          job should run. This has the effect of causing runs to skip this job
+          unless the expression matches. It's recommended not to use any minute
+          specifiers and not to use any hour specifiers if the total runtime
+          of all jobs is more than an hour.
+        :type cron_expression: str
         :param command: The command to execute as either a String or a List of
           Strings, as used by :py:func:`subprocess.run`.
         :type command: :py:obj:`str` or :py:obj:`list`
@@ -122,7 +130,8 @@ class LocalCommand(Job):
         super(LocalCommand, self).__init__(
             name,
             schedule,
-            summary_regex=summary_regex
+            summary_regex=summary_regex,
+            cron_expression=cron_expression
         )
         self._command = command
         self._shell = shell

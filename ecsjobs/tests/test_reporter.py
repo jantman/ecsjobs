@@ -284,6 +284,7 @@ class TestTrForJob(ReportTester):
         type(j).exitcode = PropertyMock(return_value=0)
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #66ff66;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
@@ -300,12 +301,36 @@ class TestTrForJob(ReportTester):
             res = self.cls._tr_for_job(j)
         assert res == expected
 
+    def test_skip(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=None)
+        type(j).duration = PropertyMock(return_value=None)
+        type(j).is_finished = PropertyMock(return_value=None)
+        type(j).skip = PropertyMock(return_value='skip reason')
+        j.summary.return_value = 'summary'
+        expected = '<tr style="background-color: #fffc4d;">' \
+                   '<td><a href="#myjob">myjob</a></td>' \
+                   '<td>Skipped</td>' \
+                   '<td>&nbsp;</td>' \
+                   '<td>skip reason</td>' \
+                   '</tr>' + "\n"
+
+        def se_td(_, s):
+            return '<td>%s</td>' % s
+
+        with patch('%s.td' % pb, autospec=True) as mock_td:
+            mock_td.side_effect = se_td
+            res = self.cls._tr_for_job(j)
+        assert res == expected
+
     def test_non_zero(self):
         j = Mock(spec_set=Job)
         type(j).name = PropertyMock(return_value='myjob')
         type(j).exitcode = PropertyMock(return_value=23)
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
@@ -328,6 +353,7 @@ class TestTrForJob(ReportTester):
         type(j).exitcode = PropertyMock(return_value=-2)
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
@@ -350,6 +376,7 @@ class TestTrForJob(ReportTester):
         type(j).exitcode = PropertyMock(return_value=0)
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff944d;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
@@ -373,6 +400,7 @@ class TestTrForJob(ReportTester):
         type(j).duration = PropertyMock(return_value=timedelta(seconds=65))
         type(j).is_finished = PropertyMock(return_value=True)
         type(j).error_repr = PropertyMock(return_value='erpr')
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         expected = '<tr style="background-color: #ff9999;">' \
                    '<td><a href="#myjob">myjob</a></td>' \
@@ -400,10 +428,27 @@ class TestDivForJob(ReportTester):
         type(j).is_finished = PropertyMock(return_value=True)
         type(j).error_repr = PropertyMock(return_value='erpr')
         type(j).output = PropertyMock(return_value='jobOutput')
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         j.report_description.return_value = 'Job Description'
         expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
                    'Job Description</p><pre>jobOutput</pre></div>' + "\n"
+        assert self.cls._div_for_job(j) == expected
+
+    def test_skip(self):
+        j = Mock(spec_set=Job)
+        type(j).name = PropertyMock(return_value='myjob')
+        type(j).exitcode = PropertyMock(return_value=None)
+        type(j).duration = PropertyMock(return_value=None)
+        type(j).is_finished = PropertyMock(return_value=False)
+        type(j).error_repr = PropertyMock(return_value='erpr')
+        type(j).output = PropertyMock(return_value='jobOutput')
+        type(j).skip = PropertyMock(return_value='skip reason')
+        j.summary.return_value = 'summary'
+        j.report_description.return_value = 'Job Description'
+        expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
+                   'Job Description</p><p>Job Skipped: skip reason</p>' \
+                   '</div>' + "\n"
         assert self.cls._div_for_job(j) == expected
 
     def test_unfinished(self):
@@ -414,6 +459,7 @@ class TestDivForJob(ReportTester):
         type(j).is_finished = PropertyMock(return_value=True)
         type(j).error_repr = PropertyMock(return_value='erpr')
         type(j).output = PropertyMock(return_value='jobOutput')
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         j.report_description.return_value = 'Job Description'
         expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \
@@ -429,6 +475,7 @@ class TestDivForJob(ReportTester):
         type(j).is_finished = PropertyMock(return_value=True)
         type(j).error_repr = PropertyMock(return_value='erpr')
         type(j).output = PropertyMock(return_value='jobOutput')
+        type(j).skip = PropertyMock(return_value=None)
         j.summary.return_value = 'summary'
         j.report_description.return_value = 'Job Description'
         expected = '<div><p><strong><a name="myjob">myjob</a></strong> - ' \

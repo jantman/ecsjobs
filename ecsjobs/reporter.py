@@ -174,10 +174,14 @@ class Reporter(object):
         :rtype: str
         """
         bg = '#66ff66'
-        if job.exitcode != 0 or exc is not None:
+        if exc is not None:
             bg = '#ff9999'
+        elif job.skip is not None:
+            bg = '#fffc4d'
         elif unfinished:
             bg = '#ff944d'
+        elif job.exitcode != 0:
+            bg = '#ff9999'
         res = '<tr style="background-color: %s;">' % bg
         res += self.td('<a href="#%s">%s</a>' % (job.name, job.name))
         if unfinished:
@@ -190,6 +194,10 @@ class Reporter(object):
             res += self.td(
                 escape('%s: %s' % (exc[0].__class__.__name__, exc[0]))
             )
+        elif job.skip is not None:
+            res += self.td('Skipped')
+            res += self.td('&nbsp;')
+            res += self.td(escape(job.skip))
         else:
             res += self.td(job.exitcode)
             res += self.td(job.duration)
@@ -222,6 +230,8 @@ class Reporter(object):
         elif unfinished:
             res += '<pre>%s</pre>\n<strong>JOB NOT FINISHED.</strong>' \
                    '' % escape(job.error_repr)
+        elif job.skip is not None:
+            res += '<p>Job Skipped: %s</p>' % escape(job.skip)
         else:
             res += '<pre>%s</pre>' % escape(job.output)
         res += '</div>' + "\n"

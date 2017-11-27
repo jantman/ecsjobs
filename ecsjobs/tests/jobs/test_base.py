@@ -38,6 +38,11 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import pytest
 from ecsjobs.jobs.base import Job
 from datetime import datetime, timedelta
+from unittest.mock import patch, Mock, call
+from freezegun import freeze_time
+
+pbm = 'ecsjobs.jobs.base'
+pb = '%s.Job' % pbm
 
 
 class TestBaseJob(object):
@@ -56,7 +61,8 @@ class TestBaseJob(object):
         assert cls._start_time is None
         assert cls._finish_time is None
         assert cls._summary_regex is None
-        assert cls._skip is False
+        assert cls._skip_reason is None
+        assert cls._cron_expression is None
 
     def test_init_regex(self):
         cls = Job('jname', 'schedname', summary_regex='foobar')
@@ -69,17 +75,70 @@ class TestBaseJob(object):
         assert cls._start_time is None
         assert cls._finish_time is None
         assert cls._summary_regex == 'foobar'
-        assert cls._skip is False
+        assert cls._skip_reason is None
+        assert cls._cron_expression is None
+
+    @freeze_time('2017-11-26 13:45:52')
+    def test_init_cronex_skip(self):
+        m_cronex = Mock()
+        m_cronex.check_trigger.return_value = False
+        with patch('%s.CronExpression' % pbm) as mock_cronex:
+            mock_cronex.return_value = m_cronex
+            cls = Job('jname', 'schedname', cron_expression='foo')
+        assert cls._name == 'jname'
+        assert cls._schedule_name == 'schedname'
+        assert cls._started is False
+        assert cls._finished is False
+        assert cls._exit_code is None
+        assert cls._output is None
+        assert cls._start_time is None
+        assert cls._finish_time is None
+        assert cls._summary_regex is None
+        assert cls._cron_expression == m_cronex
+        assert mock_cronex.mock_calls == [
+            call('foo'),
+            call().check_trigger((2017, 11, 26, 13, 45))
+        ]
+        assert m_cronex.mock_calls == [
+            call.check_trigger((2017, 11, 26, 13, 45))
+        ]
+        assert cls._skip_reason == 'cronex: "foo"'
+
+    @freeze_time('2017-11-26 13:45:52')
+    def test_init_cronex_no_skip(self):
+        m_cronex = Mock()
+        m_cronex.check_trigger.return_value = True
+        with patch('%s.CronExpression' % pbm) as mock_cronex:
+            mock_cronex.return_value = m_cronex
+            cls = Job('jname', 'schedname', cron_expression='foo')
+        assert cls._name == 'jname'
+        assert cls._schedule_name == 'schedname'
+        assert cls._started is False
+        assert cls._finished is False
+        assert cls._exit_code is None
+        assert cls._output is None
+        assert cls._start_time is None
+        assert cls._finish_time is None
+        assert cls._summary_regex is None
+        assert cls._cron_expression == m_cronex
+        assert mock_cronex.mock_calls == [
+            call('foo'),
+            call().check_trigger((2017, 11, 26, 13, 45))
+        ]
+        assert m_cronex.mock_calls == [
+            call.check_trigger((2017, 11, 26, 13, 45))
+        ]
+        assert cls._skip_reason is None
 
     def test_name(self):
         assert self.cls.name == 'jname'
 
     def test_skip(self):
-        assert self.cls.skip is False
+        assert self.cls.skip is None
 
     def test_skip_true(self):
-        self.cls._skip = True
-        assert self.cls.skip is True
+        self.cls._skip_reason = 'foo'
+        assert self.cls.skip == 'foo'
 
     def test_schedule_name(self):
         assert self.cls.schedule_name == 'schedname'

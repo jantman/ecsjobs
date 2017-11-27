@@ -41,3 +41,9 @@ jobs:
   schedule: foo
   summary_regex: .*will exit.*
   script_source: https://raw.githubusercontent.com/jantman/ecsjobs/master/docs/source/examples/https_script.sh
+- name: should_skip
+  class_name: LocalCommand
+  schedule: bar
+  command: "echo 'should be skipped'"
+  shell: true
+  cron_expression: "1 1 1 1 1"

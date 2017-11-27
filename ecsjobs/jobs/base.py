@@ -38,6 +38,8 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import abc
 import logging
 import re
+import time
+from cronex import CronExpression
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,8 @@ class Job(object):
             'name': {'type': 'string'},
             'schedule': {'type': 'string'},
             'class_name': {'type': 'string'},
-            'summary_regex': {'type': 'string'}
+            'summary_regex': {'type': 'string'},
+            'cron_expression': {'type': 'string'}
         },
         'required': [
             'name',
@@ -67,7 +70,8 @@ class Job(object):
         ]
     }
 
-    def __init__(self, name, schedule, summary_regex=None):
+    def __init__(self, name, schedule, summary_regex=None,
+                 cron_expression=None):
         """
         :param name: unique name for this job
         :type name: str
@@ -77,6 +81,13 @@ class Job(object):
           string from the job output for use in the summary table. If there is
           more than one match, the last one will be used.
         :type summary_regex: ``string`` or ``None``
+        :param cron_expression: A cron-like expression parsable by
+          `cronex <https://github.com/ericpruitt/cronex>`_ specifying when the
+          job should run. This has the effect of causing runs to skip this job
+          unless the expression matches. It's recommended not to use any minute
+          specifiers and not to use any hour specifiers if the total runtime
+          of all jobs is more than an hour.
+        :type cron_expression: str
         """
         self._name = name
         self._schedule_name = schedule
@@ -86,8 +97,15 @@ class Job(object):
         self._output = None
         self._start_time = None
         self._finish_time = None
-        self._skip = False
         self._summary_regex = summary_regex
+        self._skip_reason = None
+        self._cron_expression = None
+        if cron_expression is not None:
+            self._cron_expression = CronExpression(cron_expression)
+            if not self._cron_expression.check_trigger(
+                time.gmtime(time.time())[:5]
+            ):
+                self._skip_reason = 'cronex: "%s"' % cron_expression
 
     def __repr__(self):
         return '<%s name="%s">' % (type(self).__name__, self.name)
@@ -123,11 +141,12 @@ class Job(object):
     @property
     def skip(self):
         """
-        Whether or not to skip running this job because of the cron expression.
+        Either None if the job should not be skipped, or a string reason
+        describing why the Job should be skipped.
 
-        :rtype: bool
+        :rtype: ``None`` or ``str``
         """
-        return self._skip
+        return self._skip_reason
 
     @property
     def schedule_name(self):

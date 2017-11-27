@@ -343,14 +343,20 @@ class TestEcsJobsRunner(object):
     def test_run_jobs(self):
         j1 = Mock(name='job1')
         j1.run.return_value = True
+        type(j1).skip = PropertyMock(return_value=None)
         j2 = Mock(name='job2')
         j2.run.return_value = None
+        type(j2).skip = PropertyMock(return_value=None)
         j3 = Mock(name='job3')
         j3.run.return_value = False
+        type(j3).skip = PropertyMock(return_value=None)
         j4 = Mock(name='job4')
         type(j4).error_repr = PropertyMock(return_value='j4erepr')
         exc = RuntimeError('foo')
         j4.run.side_effect = exc
+        type(j4).skip = PropertyMock(return_value=None)
+        j5 = Mock(name='job5')
+        type(j5).skip = PropertyMock(return_value='some reason')
         self.config.get_global.return_value = 3600
         self.cls._finished = ['a']
         self.cls._running = ['b']
@@ -359,8 +365,8 @@ class TestEcsJobsRunner(object):
             with patch('%s._report' % pb, autospec=True) as mock_report:
                 with patch('%s.format_exc' % pbm) as m_fmt_exc:
                     m_fmt_exc.return_value = 'm_traceback'
-                    self.cls._run_jobs([j1, j2, j3, j4])
-        assert self.cls._finished == [j1, j3, j4]
+                    self.cls._run_jobs([j1, j2, j3, j4, j5])
+        assert self.cls._finished == [j1, j3, j4, j5]
         assert self.cls._running == [j2]
         assert self.cls._run_exceptions == {j4: (exc, 'm_traceback')}
         assert mock_poll.mock_calls == [call(self.cls)]
@@ -370,6 +376,7 @@ class TestEcsJobsRunner(object):
         assert j2.mock_calls == [call.run()]
         assert j3.mock_calls == [call.run()]
         assert j4.mock_calls == [call.run()]
+        assert j5.mock_calls == []
         assert m_fmt_exc.mock_calls == [call()]
 
     @freeze_time('2017-10-20 12:30:00')
@@ -381,14 +388,18 @@ class TestEcsJobsRunner(object):
 
         j1 = Mock(name='job1')
         j1.run.return_value = True
+        type(j1).skip = PropertyMock(return_value=None)
         j2 = Mock(name='job2')
         j2.run.side_effect = se_run
+        type(j2).skip = PropertyMock(return_value=None)
         j3 = Mock(name='job3')
         j3.run.return_value = False
+        type(j3).skip = PropertyMock(return_value=None)
         j4 = Mock(name='job4')
         type(j4).error_repr = PropertyMock(return_value='j4erepr')
         exc = RuntimeError('foo')
         j4.run.side_effect = exc
+        type(j4).skip = PropertyMock(return_value=None)
         self.config.get_global.return_value = 3600
         self.cls._finished = ['a']
         self.cls._running = ['b']

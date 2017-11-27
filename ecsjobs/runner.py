@@ -113,6 +113,10 @@ class EcsJobsRunner(object):
                 logger.error('Time limit reached; not running any more jobs!')
                 self._running.append(j)
                 continue
+            if j.skip is not None and not force_run:
+                logger.debug('Skipping job %s: %s', j.name, j.skip)
+                self._finished.append(j)
+                continue
             try:
                 logger.debug('Running job: %s', j)
                 res = j.run()

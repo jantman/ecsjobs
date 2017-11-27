@@ -61,9 +61,11 @@ class DockerExec(Job):
         ]
     }
 
-    def __init__(self, name, schedule, summary_regex=None):
+    def __init__(self, name, schedule, summary_regex=None,
+                 cron_expression=None):
         super(DockerExec, self).__init__(
-            name, schedule, summary_regex=summary_regex
+            name, schedule, summary_regex=summary_regex,
+            cron_expression=cron_expression
         )
         self._docker = None
 
