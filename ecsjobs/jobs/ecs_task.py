@@ -44,25 +44,40 @@ logger = logging.getLogger(__name__)
 
 
 class EcsTask(Job):
+    """
+    Class to run an ECS Task asynchronously; starts the task with the
+    :py:meth:`~.run` method and then uses :py:meth:`~.poll` to wait for it to
+    finish. Sets :py:attr:`~.exitcode` to 0 if the task finished successfully or
+    1 if the task had an error or failure.
+    """
 
     #: Dictionary describing the configuration file schema, to be validated
     #: with `jsonschema <https://github.com/Julian/jsonschema>`_.
     _schema_dict = {
         'type': 'object',
-        'properties': {
-            'name': {'type': 'string'},
-            'schedule': {'type': 'string'},
-            'class_name': {'type': 'string'}
-        },
-        'required': [
-            'name',
-            'schedule',
-            'class_name'
-        ]
+        'properties': {},
+        'required': []
     }
 
     def __init__(self, name, schedule, summary_regex=None,
                  cron_expression=None):
+        """
+        :param name: unique name for this job
+        :type name: str
+        :param schedule: the name of the schedule this job runs on
+        :type schedule: str
+        :param summary_regex: A regular expression to use for extracting a
+          string from the job output for use in the summary table. If there is
+          more than one match, the last one will be used.
+        :type summary_regex: ``string`` or ``None``
+        :param cron_expression: A cron-like expression parsable by
+          `cronex <https://github.com/ericpruitt/cronex>`_ specifying when the
+          job should run. This has the effect of causing runs to skip this job
+          unless the expression matches. It's recommended not to use any minute
+          specifiers and not to use any hour specifiers if the total runtime
+          of all jobs is more than an hour.
+        :type cron_expression: str
+        """
         super(EcsTask, self).__init__(
             name, schedule, summary_regex=summary_regex,
             cron_expression=cron_expression
