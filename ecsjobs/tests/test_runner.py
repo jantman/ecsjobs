@@ -80,7 +80,8 @@ class TestParseArgs(object):
         with pytest.raises(RuntimeError) as exc:
             parse_args(['run'])
         assert str(exc.value) == 'ERROR: "run" action must have one or ' \
-                                 'more SCHEDULES specified'
+                                 'more SCHEDULES specified if jobs are not ' \
+                                 'explicitly specified with -j / --job'
 
     def test_parse_args_run_one(self):
         res = parse_args(['run', 'foo'])
@@ -104,6 +105,19 @@ class TestParseArgs(object):
         out, err = capsys.readouterr()
         assert out == expected
         assert err == ''
+
+    def test_parse_args_jobs(self):
+        res = parse_args(['-v', 'run', '-j', 'bar', '--job=baz'])
+        assert res.verbose == 1
+        assert res.ACTION == 'run'
+        assert res.SCHEDULES == []
+        assert res.jobs == ['bar', 'baz']
+
+    def test_parse_args_jobs_and_schedules(self):
+        with pytest.raises(RuntimeError) as exc:
+            parse_args(['-v', '-j', 'bar', '--job=baz', 'run', 'foo'])
+        assert str(exc.value) == 'ERROR: SCHEDULES cannot be mixed with ' \
+                                 '-j / --job.'
 
 
 class TestLogSetup(object):
@@ -221,7 +235,7 @@ class TestMain(object):
         assert err == ''
         assert out == "foo\nbar\nbaz\n"
 
-    def test_run(self, capsys):
+    def test_run_schedules(self, capsys):
         with patch.multiple(
             pbm,
             autospec=True,
@@ -233,7 +247,7 @@ class TestMain(object):
             EcsJobsRunner=DEFAULT
         ) as mocks:
             mocks['parse_args'].return_value = MockArgs(
-                ACTION='run', SCHEDULES=['foo', 'baz'], verbose=1
+                ACTION='run', SCHEDULES=['foo', 'baz'], verbose=1, jobs=[]
             )
             main(['run', 'foo', 'baz'])
         assert mocks['logger'].mock_calls == []
@@ -244,6 +258,33 @@ class TestMain(object):
         assert mocks['EcsJobsRunner'].mock_calls == [
             call(mocks['Config'].return_value),
             call().run_schedules(['foo', 'baz'])
+        ]
+
+    def test_run_jobs(self, capsys):
+        with patch.multiple(
+            pbm,
+            autospec=True,
+            logger=DEFAULT,
+            parse_args=DEFAULT,
+            set_log_debug=DEFAULT,
+            set_log_info=DEFAULT,
+            Config=DEFAULT,
+            EcsJobsRunner=DEFAULT
+        ) as mocks:
+            mocks['parse_args'].return_value = MockArgs(
+                ACTION='run', SCHEDULES=[], verbose=1, jobs=['joba', 'jobb']
+            )
+            main(['run', '-j', 'joba', '--job=jobb'])
+        assert mocks['logger'].mock_calls == []
+        assert mocks['parse_args'].mock_calls == [
+            call(['run', '-j', 'joba', '--job=jobb'])
+        ]
+        assert mocks['set_log_debug'].mock_calls == []
+        assert mocks['set_log_info'].mock_calls == [call(logging.getLogger())]
+        assert mocks['Config'].mock_calls == [call()]
+        assert mocks['EcsJobsRunner'].mock_calls == [
+            call(mocks['Config'].return_value),
+            call().run_job_names(['joba', 'jobb'])
         ]
 
 
@@ -262,7 +303,6 @@ class TestEcsJobsRunner(object):
         assert cls._start_time is None
         assert cls._timeout is None
 
-    @freeze_time('2017-10-20 12:30:00')
     def test_run_schedules(self):
         j1 = Mock(name='job1')
         j1.run.return_value = True
@@ -275,6 +315,42 @@ class TestEcsJobsRunner(object):
         exc = RuntimeError('foo')
         j4.run.side_effect = exc
         self.config.jobs_for_schedules.return_value = [j1, j2, j3, j4]
+        with patch('%s._run_jobs' % pb, autospec=True) as mock_run:
+            self.cls.run_schedules(['foo', 'bar'])
+        assert mock_run.mock_calls == [call(self.cls, [j1, j2, j3, j4])]
+
+    def test_run_job_names(self):
+        j1 = Mock(name='job1')
+        type(j1).name = PropertyMock(return_value='job1')
+        j1.run.return_value = True
+        j2 = Mock(name='job2')
+        j2.run.return_value = None
+        type(j2).name = PropertyMock(return_value='job2')
+        j3 = Mock(name='job3')
+        j3.run.return_value = False
+        type(j3).name = PropertyMock(return_value='job3')
+        j4 = Mock(name='job4')
+        type(j4).error_repr = PropertyMock(return_value='j4erepr')
+        exc = RuntimeError('foo')
+        j4.run.side_effect = exc
+        type(j4).name = PropertyMock(return_value='job4')
+        type(self.config).jobs = PropertyMock(return_value=[j1, j2, j3, j4])
+        with patch('%s._run_jobs' % pb, autospec=True) as mock_run:
+            self.cls.run_job_names(['job2', 'job3'])
+        assert mock_run.mock_calls == [call(self.cls, [j2, j3], force_run=True)]
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_run_jobs(self):
+        j1 = Mock(name='job1')
+        j1.run.return_value = True
+        j2 = Mock(name='job2')
+        j2.run.return_value = None
+        j3 = Mock(name='job3')
+        j3.run.return_value = False
+        j4 = Mock(name='job4')
+        type(j4).error_repr = PropertyMock(return_value='j4erepr')
+        exc = RuntimeError('foo')
+        j4.run.side_effect = exc
         self.config.get_global.return_value = 3600
         self.cls._finished = ['a']
         self.cls._running = ['b']
@@ -283,15 +359,13 @@ class TestEcsJobsRunner(object):
             with patch('%s._report' % pb, autospec=True) as mock_report:
                 with patch('%s.format_exc' % pbm) as m_fmt_exc:
                     m_fmt_exc.return_value = 'm_traceback'
-                    self.cls.run_schedules(['foo', 'bar'])
+                    self.cls._run_jobs([j1, j2, j3, j4])
         assert self.cls._finished == [j1, j3, j4]
         assert self.cls._running == [j2]
         assert self.cls._run_exceptions == {j4: (exc, 'm_traceback')}
         assert mock_poll.mock_calls == [call(self.cls)]
         assert mock_report.mock_calls == [call(self.cls)]
-        assert self.config.jobs_for_schedules.mock_calls == [
-            call(['foo', 'bar'])
-        ]
+        assert self.config.jobs_for_schedules.mock_calls == []
         assert j1.mock_calls == [call.run()]
         assert j2.mock_calls == [call.run()]
         assert j3.mock_calls == [call.run()]
@@ -299,7 +373,7 @@ class TestEcsJobsRunner(object):
         assert m_fmt_exc.mock_calls == [call()]
 
     @freeze_time('2017-10-20 12:30:00')
-    def test_run_schedules_timeout(self):
+    def test_run_jobs_timeout(self):
 
         def se_run():
             self.cls._timeout = datetime(2017, 10, 20, 12, 20, 00)
@@ -315,7 +389,6 @@ class TestEcsJobsRunner(object):
         type(j4).error_repr = PropertyMock(return_value='j4erepr')
         exc = RuntimeError('foo')
         j4.run.side_effect = exc
-        self.config.jobs_for_schedules.return_value = [j1, j2, j3, j4]
         self.config.get_global.return_value = 3600
         self.cls._finished = ['a']
         self.cls._running = ['b']
@@ -325,15 +398,13 @@ class TestEcsJobsRunner(object):
                 with patch('%s.logger' % pbm) as mock_logger:
                     with patch('%s.format_exc' % pbm) as m_fmt_exc:
                         m_fmt_exc.return_value = 'm_traceback'
-                        self.cls.run_schedules(['foo', 'bar'])
+                        self.cls._run_jobs([j1, j2, j3, j4])
         assert self.cls._finished == [j1]
         assert self.cls._running == [j2, j3, j4]
         assert self.cls._run_exceptions == {}
         assert mock_poll.mock_calls == [call(self.cls)]
         assert mock_report.mock_calls == [call(self.cls)]
-        assert self.config.jobs_for_schedules.mock_calls == [
-            call(['foo', 'bar'])
-        ]
+        assert self.config.jobs_for_schedules.mock_calls == []
         assert j1.mock_calls == [call.run()]
         assert j2.mock_calls == [call.run()]
         assert j3.mock_calls == []

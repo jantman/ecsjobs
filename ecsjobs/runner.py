@@ -73,12 +73,36 @@ class EcsJobsRunner(object):
         :param schedule_names: names of the schedules to run
         :type schedule_names: list
         """
-        self._finished = []
-        self._running = []
-        self._run_exceptions = {}
         jobs = self._conf.jobs_for_schedules(schedule_names)
         logger.info('Running %d jobs for schedules %s: %s',
                     len(jobs), schedule_names, jobs)
+        self._run_jobs(jobs)
+
+    def run_job_names(self, job_names):
+        """
+        Run the named jobs, regardless of schedule.
+
+        :param job_names: list of string job names to run
+        :type job_names: list
+        """
+        jobs = [j for j in self._conf.jobs if j.name in job_names]
+        logger.info('Running %d jobs for names %s: %s',
+                    len(jobs), job_names, jobs)
+        self._run_jobs(jobs, force_run=True)
+
+    def _run_jobs(self, jobs, force_run=False):
+        """
+        Run the specified jobs.
+
+        :param jobs: list of Job instances to run
+        :type jobs: list
+        :param force_run: Run each job regardless of cron expression
+        :type force_run: bool
+        """
+        self._finished = []
+        self._running = []
+        self._run_exceptions = {}
+        logger.info('Running %d jobs: %s', len(jobs), jobs)
         self._start_time = datetime.now()
         self._timeout = self._start_time + timedelta(
             seconds=self._conf.get_global('max_total_runtime_sec')
@@ -146,13 +170,22 @@ def parse_args(argv):
                    version='ecsjobs v%s <%s>' % (VERSION, PROJECT_URL))
     p.add_argument('ACTION', action='store', type=str, choices=actions,
                    help='Action to take; one of: %s' % actions)
+    p.add_argument('-j', '--job', action='append', dest='jobs', default=[],
+                   help='Job names to run, regardless of specified schedules '
+                        'or cron expressions.')
     p.add_argument('SCHEDULES', action='store', nargs='*',
                    help='Schedule names to run; one or more.')
     args = p.parse_args(argv)
-    if args.ACTION == 'run' and len(args.SCHEDULES) < 1:
-        raise RuntimeError(
-            'ERROR: "run" action must have one or more SCHEDULES specified'
-        )
+    if args.ACTION == 'run':
+        if len(args.SCHEDULES) < 1 and len(args.jobs) < 1:
+            raise RuntimeError(
+                'ERROR: "run" action must have one or more SCHEDULES '
+                'specified if jobs are not explicitly specified with -j / --job'
+            )
+        if len(args.SCHEDULES) > 0 and len(args.jobs) > 0:
+            raise RuntimeError(
+                'ERROR: SCHEDULES cannot be mixed with -j / --job.'
+            )
     return args
 
 
@@ -217,7 +250,10 @@ def main(argv=None):
         for s in conf.schedule_names:
             print(s)
         raise SystemExit(0)
-    EcsJobsRunner(conf).run_schedules(args.SCHEDULES)
+    if len(args.SCHEDULES) > 0:
+        EcsJobsRunner(conf).run_schedules(args.SCHEDULES)
+    else:
+        EcsJobsRunner(conf).run_job_names(args.jobs)
 
 
 if __name__ == "__main__":
