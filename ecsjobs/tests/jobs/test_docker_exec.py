@@ -46,13 +46,14 @@ pb = '%s.DockerExec' % pbm
 class TestDockerExecInit(object):
 
     def test_init(self):
-        cls = DockerExec('jname', 'sname')
+        cls = DockerExec('jname', 'sname', container_name='cname',
+                         command='/my/cmd')
         assert cls.name == 'jname'
         assert cls.schedule_name == 'sname'
         assert cls._summary_regex is None
         assert cls._cron_expression is None
-        assert cls._container_name is None
-        assert cls._command is None
+        assert cls._container_name == 'cname'
+        assert cls._command == '/my/cmd'
         assert cls._tty is False
         assert cls._stdout is True
         assert cls._stderr is True

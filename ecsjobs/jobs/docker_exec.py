@@ -141,7 +141,9 @@ class DockerExec(Job, DockerExecMixin):
             cron_expression=cron_expression
         )
         self._docker = None
+        assert container_name is not None, 'container_name must be specified'
         self._container_name = container_name
+        assert command is not None, 'command must be specified'
         self._command = command
         self._container = None
         self._tty = tty
