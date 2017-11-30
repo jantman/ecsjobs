@@ -486,15 +486,15 @@ class TestEcsTask(object):
             {
                 'events': [
                     {
-                        'timestamp': 1512005266,
+                        'timestamp': 1512005266000,
                         'message': 'msg1'
                     },
                     {
-                        'timestamp': 1512005267,
+                        'timestamp': 1512005267000,
                         'message': 'msg2'
                     },
                     {
-                        'timestamp': 1512005268,
+                        'timestamp': 1512005268000,
                         'message': 'msg3'
                     }
                 ]
@@ -502,11 +502,11 @@ class TestEcsTask(object):
             {
                 'events': [
                     {
-                        'timestamp': 1512005269,
+                        'timestamp': 1512005269000,
                         'message': 'msg4'
                     },
                     {
-                        'timestamp': 1512005269,
+                        'timestamp': 1512005269000,
                         'message': 'msg5'
                     }
                 ]
