@@ -26,3 +26,23 @@ To run the "foo" schedule locally in a detached/background container (i.e. as a 
       -v $(readlink -f ~/.aws/credentials):/root/.aws/credentials \
       jantman/ecsjobs:latest \
       run foo
+
+Note that when running in this method, the ``LocalCommand`` class runs commands inside the ecsjobs Docker container, not on the host system.
+
+Locally via pip
+---------------
+
+To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, first setup a virtualenv and install ecsjobs:
+
+    virtualenv --python=python3.6 .
+    source bin/activate
+    pip install ecsjobs
+
+To run the "foo" schedule locally using a configuration directory at ``./conf``:
+
+    ECSJOBS_LOCAL_CONF_PATH=$(readlink -f ./conf) ecsjobs run foo
+
+In ECS
+------
+
+TBD.
