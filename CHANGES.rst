@@ -1,7 +1,7 @@
 Changelog
 =========
 
-x.y.z (YYYY-MM-DD)
+0.2.0 (YYYY-MM-DD)
 ------------------
 
-* something
+* Initial mostly-complete release

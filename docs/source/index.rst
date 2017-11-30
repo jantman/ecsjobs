@@ -10,6 +10,7 @@ Contents
    :maxdepth: 4
 
    Configuration <configuration>
+   Running <running>
    API <modules>
    Changelog <changes>
 
