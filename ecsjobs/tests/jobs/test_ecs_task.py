@@ -515,11 +515,11 @@ class TestEcsTask(object):
         self.mock_cw.get_paginator.return_value = m_paginator
         self.cls._cw = self.mock_cw
         res = self.cls._output_for_task_container('tid', 'cname')
-        assert res == '2017-11-29 20:27:46\tmsg1\n' \
-                      '2017-11-29 20:27:47\tmsg2\n' \
-                      '2017-11-29 20:27:48\tmsg3\n' \
-                      '2017-11-29 20:27:49\tmsg4\n' \
-                      '2017-11-29 20:27:49\tmsg5\n'
+        assert res == '2017-11-30 01:27:46Z\tmsg1\n' \
+                      '2017-11-30 01:27:47Z\tmsg2\n' \
+                      '2017-11-30 01:27:48Z\tmsg3\n' \
+                      '2017-11-30 01:27:49Z\tmsg4\n' \
+                      '2017-11-30 01:27:49Z\tmsg5\n'
         assert self.mock_cw.mock_calls == [
             call.get_paginator('filter_log_events'),
             call.get_paginator().paginate(

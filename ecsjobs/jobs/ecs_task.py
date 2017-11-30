@@ -39,7 +39,7 @@ import abc  # noqa
 from ecsjobs.jobs.base import Job
 import logging
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -280,9 +280,9 @@ class EcsTask(Job):
             logGroupName=srcinfo[0], logStreamNames=[stream_name]
         ):
             for evt in resp_iter['events']:
-                res += '%s\t%s\n' % (
+                res += '%sZ\t%s\n' % (
                     datetime.fromtimestamp(
-                        evt['timestamp'] / 1000
+                        evt['timestamp'] / 1000, tz=timezone.utc
                     ).strftime('%Y-%m-%d %H:%M:%S'),
                     evt['message']
                 )
