@@ -60,3 +60,60 @@ Each job configuration file or mapping should match the following:
 
 The rest of the Job keys depend on the class. See the documentation of each
 Job subclass for the required configuration.
+
+Example Configuration
+---------------------
+
+Global
+++++++
+
+The content of ``global.yml`` might look like:
+
+.. code-block::yaml
+
+    from_email: me@example.com
+    to_email: me@example.com
+
+Email reports can also be sent to multiple recipients:
+
+.. code-block::yaml
+
+    from_email: me@example.com
+    to_email:
+      - me@example.com
+      - you@example.com
+
+All Job Classes
++++++++++++++++
+
+All Job classes require the ``name``, ``schedule`` and ``class_name`` properties:
+
+.. code-block:: yaml
+
+    name: jobName
+    schedule: scheduleName
+    class_name: SomeJobSubclassName
+
+They also support two optional properties, ``summary_regex`` and ``cron_expression``.
+See the documentation for the :py:class:`~.Job` class for more information.
+
+Local Commands
+++++++++++++++
+
+Commands can be specified as a string:
+
+.. code-block:: yaml
+
+    name: jobName
+    schedule: scheduleName
+    class_name: LocalCommand
+    command: /bin/true
+
+Or as an array:
+
+.. code-block:: yaml
+
+    name: jobName
+    schedule: scheduleName
+    class_name: LocalCommand
+    command: ['/bin/echo', 'foo']
