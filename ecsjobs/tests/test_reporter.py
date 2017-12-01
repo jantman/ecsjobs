@@ -118,6 +118,23 @@ class TestRun(ReportTester):
             )
         ]
 
+    def test_run_only_if_problems(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+        with patch('%s._make_report' % pb) as mock_mr:
+            mock_mr.return_value = 'my_html_report'
+            self.cls.run(
+                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt,
+                only_email_if_problems=True
+            )
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == []
+
     def test_run_to_str(self):
         m_finished = Mock()
         m_unfinished = Mock()
@@ -254,6 +271,7 @@ class TestMakeReport(ReportTester):
                     finished, unfinished, excs, s_dt, e_dt
                 )
         assert res == expected
+        assert self.cls._have_failures is False
         assert mocks['_tr_for_job'].mock_calls == [
             call(self.cls, j1, exc=None),
             call(self.cls, j2, exc=m_exc),
@@ -300,6 +318,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j)
         assert res == expected
+        assert self.cls._have_failures is False
 
     def test_skip(self):
         j = Mock(spec_set=Job)
@@ -323,6 +342,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j)
         assert res == expected
+        assert self.cls._have_failures is False
 
     def test_non_zero(self):
         j = Mock(spec_set=Job)
@@ -346,6 +366,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j)
         assert res == expected
+        assert self.cls._have_failures is True
 
     def test_less_than_zero(self):
         j = Mock(spec_set=Job)
@@ -369,6 +390,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j)
         assert res == expected
+        assert self.cls._have_failures is True
 
     def test_unfinished(self):
         j = Mock(spec_set=Job)
@@ -392,6 +414,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j, unfinished=True)
         assert res == expected
+        assert self.cls._have_failures is True
 
     def test_exception(self):
         j = Mock(spec_set=Job)
@@ -416,6 +439,7 @@ class TestTrForJob(ReportTester):
             mock_td.side_effect = se_td
             res = self.cls._tr_for_job(j, exc=(RuntimeError('foo'), 'tb'))
         assert res == expected
+        assert self.cls._have_failures is True
 
 
 class TestDivForJob(ReportTester):

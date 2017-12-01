@@ -58,13 +58,14 @@ for lname in ['requests', 'botocore', 'boto3']:
 
 class EcsJobsRunner(object):
 
-    def __init__(self, config):
+    def __init__(self, config, only_email_if_problems=False):
         self._conf = config
         self._finished = []
         self._running = []
         self._run_exceptions = {}
         self._start_time = None
         self._timeout = None
+        self._only_email_if_problems = only_email_if_problems
 
     def run_schedules(self, schedule_names):
         """
@@ -161,7 +162,8 @@ class EcsJobsRunner(object):
         """Generate and send email report."""
         Reporter(self._conf).run(
             self._finished, self._running, self._run_exceptions,
-            self._start_time, datetime.now()
+            self._start_time, datetime.now(),
+            only_email_if_problems=self._only_email_if_problems
         )
 
 
@@ -172,6 +174,10 @@ def parse_args(argv):
                    help='verbose output. specify twice for debug-level output.')
     p.add_argument('-V', '--version', action='version',
                    version='ecsjobs v%s <%s>' % (VERSION, PROJECT_URL))
+    p.add_argument('-m', '--only-email-if-problems', action='store_true',
+                   dest='only_email_if_problems', default=False,
+                   help='If specified, only send email report if at least one '
+                        'job failed, raised an exception or was not run.')
     p.add_argument('ACTION', action='store', type=str, choices=actions,
                    help='Action to take; one of: %s' % actions)
     p.add_argument('-j', '--job', action='append', dest='jobs', default=[],

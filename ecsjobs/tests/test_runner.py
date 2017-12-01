@@ -69,12 +69,14 @@ class TestParseArgs(object):
         assert res.verbose == 1
         assert res.ACTION == 'list-schedules'
         assert res.SCHEDULES == []
+        assert res.only_email_if_problems is False
 
     def test_parse_args_validate(self):
         res = parse_args(['-vv', 'validate'])
         assert res.verbose == 2
         assert res.ACTION == 'validate'
         assert res.SCHEDULES == []
+        assert res.only_email_if_problems is False
 
     def test_parse_args_run_none(self):
         with pytest.raises(RuntimeError) as exc:
@@ -88,12 +90,14 @@ class TestParseArgs(object):
         assert res.verbose == 0
         assert res.ACTION == 'run'
         assert res.SCHEDULES == ['foo']
+        assert res.only_email_if_problems is False
 
     def test_parse_args_run_three(self):
-        res = parse_args(['-v', 'run', 'foo', 'bar', 'baz'])
+        res = parse_args(['-m', '-v', 'run', 'foo', 'bar', 'baz'])
         assert res.verbose == 1
         assert res.ACTION == 'run'
         assert res.SCHEDULES == ['foo', 'bar', 'baz']
+        assert res.only_email_if_problems is True
 
     def test_parse_args_version(self, capsys):
         with pytest.raises(SystemExit) as excinfo:
@@ -107,11 +111,14 @@ class TestParseArgs(object):
         assert err == ''
 
     def test_parse_args_jobs(self):
-        res = parse_args(['-v', 'run', '-j', 'bar', '--job=baz'])
+        res = parse_args(
+            ['--only-email-if-problems', '-v', 'run', '-j', 'bar', '--job=baz']
+        )
         assert res.verbose == 1
         assert res.ACTION == 'run'
         assert res.SCHEDULES == []
         assert res.jobs == ['bar', 'baz']
+        assert res.only_email_if_problems is True
 
     def test_parse_args_jobs_and_schedules(self):
         with pytest.raises(RuntimeError) as exc:
@@ -302,6 +309,17 @@ class TestEcsJobsRunner(object):
         assert cls._run_exceptions == {}
         assert cls._start_time is None
         assert cls._timeout is None
+        assert cls._only_email_if_problems is False
+
+    def test_init_only_if_problems(self):
+        cls = EcsJobsRunner(self.config, only_email_if_problems=True)
+        assert cls._conf == self.config
+        assert cls._finished == []
+        assert cls._running == []
+        assert cls._run_exceptions == {}
+        assert cls._start_time is None
+        assert cls._timeout is None
+        assert cls._only_email_if_problems is True
 
     def test_run_schedules(self):
         j1 = Mock(name='job1')
@@ -494,6 +512,28 @@ class TestEcsJobsRunner(object):
                 self.cls._running,
                 self.cls._run_exceptions,
                 datetime(2017, 10, 20, 11, 45, 00),
-                datetime(2017, 10, 20, 12, 30, 00)
+                datetime(2017, 10, 20, 12, 30, 00),
+                only_email_if_problems=False
+            )
+        ]
+
+    @freeze_time('2017-10-20 12:30:00')
+    def test_report_only_if_problems(self):
+        self.cls._finished = Mock()
+        self.cls._running = Mock()
+        self.cls._run_exceptions = Mock()
+        self.cls._only_email_if_problems = True
+        self.cls._start_time = datetime(2017, 10, 20, 11, 45, 00)
+        with patch('%s.Reporter' % pbm, autospec=True) as mock_report:
+            self.cls._report()
+        assert mock_report.mock_calls == [
+            call(self.config),
+            call().run(
+                self.cls._finished,
+                self.cls._running,
+                self.cls._run_exceptions,
+                datetime(2017, 10, 20, 11, 45, 00),
+                datetime(2017, 10, 20, 12, 30, 00),
+                only_email_if_problems=True
             )
         ]

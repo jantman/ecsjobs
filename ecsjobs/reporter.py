@@ -58,8 +58,10 @@ class Reporter(object):
         """
         self._config = config
         self._ses = boto3.client('ses')
+        self._have_failures = False
 
-    def run(self, finished, unfinished, excs, start_dt, end_dt):
+    def run(self, finished, unfinished, excs, start_dt, end_dt,
+            only_email_if_problems=False):
         """
         Generate and send the report.
 
@@ -75,8 +77,17 @@ class Reporter(object):
         :type start_dt: datetime.datetime
         :param end_dt: datetime instance when run was finished
         :type end_dt: datetime.datetime
+        :param only_email_if_problems: If True, only send email report if there
+          were failures, exceptions, or unfinished jobs. Otherwise, always send
+          email.
+        :type only_email_if_problems: bool
         """
+        self._have_failures = False
         report = self._make_report(finished, unfinished, excs, start_dt, end_dt)
+        if only_email_if_problems and not self._have_failures:
+            logger.info('only_email_if_problems is True and no problems; '
+                        'not sending email')
+            return
         to_addr = self._config.get_global('to_email')
         if not isinstance(to_addr, type([])):
             to_addr = [to_addr]
@@ -180,8 +191,10 @@ class Reporter(object):
             bg = '#fffc4d'
         elif unfinished:
             bg = '#ff944d'
+            self._have_failures = True
         elif job.exitcode != 0:
             bg = '#ff9999'
+            self._have_failures = True
         res = '<tr style="background-color: %s;">' % bg
         res += self.td('<a href="#%s">%s</a>' % (job.name, job.name))
         if unfinished:
@@ -194,6 +207,7 @@ class Reporter(object):
             res += self.td(
                 escape('%s: %s' % (exc[0].__class__.__name__, exc[0]))
             )
+            self._have_failures = True
         elif job.skip is not None:
             res += self.td('Skipped')
             res += self.td('&nbsp;')

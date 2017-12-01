@@ -150,3 +150,8 @@ This is actually a snippet from a terraform configuration. A few notes about it:
 * In order to be able to run Docker Execs on the ECS host, i.e. against another ECS container, we mount ``/var/run/docker.sock`` from the host into the container at ``/tmp/docker.sock``. The ``DOCKER_HOST`` environment variable must be set to the path of the socket (prefixed with ``unix://`` to denote that it's a socket).
 * The ``ECSJOBS_BUCKET`` and ``ECSJOBS_KEY`` environment variables specify the bucket name and key (in that bucket) to retrieve configuration from.
 * The ``${var.log_group_name}`` and ``${var.cluster_name}`` variables specify settings for the ``awslogs`` Docker logging driver, to send container logs to CloudWatch Logs.
+
+Suppressing Reports for Successful Runs
+---------------------------------------
+
+If you do not wish to send an email report if all jobs ran successfully, you can pass the ``-m`` / ``--only-email-if-problems`` command line argument to ecsjobs.
