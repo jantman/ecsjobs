@@ -41,7 +41,7 @@ Release Checklist
 1. Ensure that Travis tests are passing in all environments.
 2. Ensure that test coverage is no less than the last release (ideally, 100%).
 3. Build docs for the branch (locally) and ensure they look correct (``tox -e docs``). Commit any changes.
-4. Increment the version number in ecsjobs/version.py and add version and release date to CHANGES.rst. Ensure that there are CHANGES.rst entries for all major changes since the last release, and that any new required IAM permissions are explicitly mentioned. Commit changes and push to GitHub. Wait for builds to pass.
+4. Increment the version number in ecsjobs/version.py and add version and release date to CHANGES.rst. ``export ECSJOBS_VER=x.y.z``. Ensure that there are CHANGES.rst entries for all major changes since the last release, and that any new required IAM permissions are explicitly mentioned. Commit changes and push to GitHub. Wait for builds to pass.
 5. Confirm that README.rst renders correctly on GitHub.
 6. Upload package to testpypi, confirm that README.rst renders correctly.
 
@@ -53,9 +53,9 @@ Release Checklist
 
 7. Tag the release in Git, push tag to GitHub:
 
-   * tag the release with a signed tag: ``git tag -s -a X.Y.Z -m 'X.Y.Z released YYYY-MM-DD'``
-   * Verify the signature on the tag, just to be sure: ``git tag -v X.Y.Z``
-   * push the tag to GitHub: ``git push origin X.Y.Z``
+   * tag the release with a signed tag: ``git tag -s -a $ECSJOBS_VER -m "$ECSJOBS_VER released $(date +%Y-%m-%d)"``
+   * Verify the signature on the tag, just to be sure: ``git tag -v $ECSJOBS_VER``
+   * push the tag to GitHub: ``git push origin $ECSJOBS_VER``
 
 8. Upload package to live pypi:
 
@@ -64,8 +64,8 @@ Release Checklist
 9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag.
 10. Re-tag the generated Docker image with the version and "latest" and then push to Docker Hub:
 
-   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:X.Y.Z``
-   * ``docker push jantman/ecsjobs:X.Y.Z``
+   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
+   * ``docker push jantman/ecsjobs:$ECSJOBS_VER``
    * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:latest``
    * ``docker push jantman/ecsjobs:latest``
 
