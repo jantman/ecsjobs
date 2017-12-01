@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Unreleased Changes
+0.3.0 (2017-12-01)
 ------------------
 
 * Document release process
