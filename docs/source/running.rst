@@ -6,9 +6,13 @@ Locally via Docker
 
 To pull the Docker image
 
+.. code-block:: bash
+
     docker pull jantman/ecsjobs:latest
 
 To run locally via Docker to validate a configuration directory ``./conf``:
+
+.. code-block:: bash
 
     docker run -it --rm \
       -e ECSJOBS_LOCAL_CONF_PATH=/tmp/conf \
@@ -17,6 +21,8 @@ To run locally via Docker to validate a configuration directory ``./conf``:
       validate
 
 To run the "foo" schedule locally in a detached/background container (i.e. as a cron job) and allow it to run Docker execs, assuming your Docker socket is at ``/var/run/docker.sock``, your configuration directory is at ``./conf``, and you want to use AWS credentials from ``~/.aws/credentials``:
+
+.. code-block:: bash
 
     docker run --rm -d \
       -e ECSJOBS_LOCAL_CONF_PATH=/tmp/conf \
@@ -34,11 +40,15 @@ Locally via pip
 
 To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, first setup a virtualenv and install ecsjobs:
 
+.. code-block:: bash
+
     virtualenv --python=python3.6 .
     source bin/activate
     pip install ecsjobs
 
 To run the "foo" schedule locally using a configuration directory at ``./conf``:
+
+.. code-block:: bash
 
     ECSJOBS_LOCAL_CONF_PATH=$(readlink -f ./conf) ecsjobs run foo
 
