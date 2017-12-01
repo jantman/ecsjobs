@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased Changes
+------------------
+
+* Add ``awscli`` to Docker image
+
 0.3.0 (2017-12-01)
 ------------------
 

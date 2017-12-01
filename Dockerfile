@@ -12,6 +12,7 @@ ADD dist/$whlname /tmp/
 RUN pip install -U pip \
   && mkdir -p /root/.aws \
   && pip install /tmp/$whlname \
+  && pip install awscli \
   && which ecsjobs \
   && pip freeze
 
