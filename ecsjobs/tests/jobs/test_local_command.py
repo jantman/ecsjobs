@@ -284,6 +284,7 @@ class TestLocalCommandGetScript(object):
         assert self.cls.is_finished is False
         assert self.cls.exitcode is None
         assert self.cls.output is None
+        self.cls._command = ''
 
         m_client = Mock()
         m_body = Mock()
@@ -331,11 +332,65 @@ class TestLocalCommandGetScript(object):
             call().close()
         ]
 
+    def test_boto_with_args(self):
+        assert self.cls.is_started is False
+        assert self.cls.is_finished is False
+        assert self.cls.exitcode is None
+        assert self.cls.output is None
+        self.cls._command = ['foo', 'bar', 'baz']
+
+        m_client = Mock()
+        m_body = Mock()
+        m_body.read.return_value = 'myContent'
+        m_client.get_object.return_value = {
+            'Body': m_body
+        }
+        m_fd = Mock()
+
+        with patch.multiple(
+            pbm,
+            **{
+                'boto3': DEFAULT,
+                'requests': DEFAULT,
+                'mkstemp': DEFAULT,
+                'chmod': DEFAULT,
+                'fdopen': DEFAULT
+            }
+        ) as mocks:
+            mocks['boto3'].client.return_value = m_client
+            mocks['mkstemp'].return_value = m_fd, '/tmp/tmpfile'
+            res = self.cls._get_script('s3://bktname/path/to/key')
+        assert res == ['/tmp/tmpfile', 'foo', 'bar', 'baz']
+        assert self.cls.is_started is False
+        assert self.cls.is_finished is False
+        assert self.cls.exitcode is None
+        assert self.cls.output is None
+        assert mocks['boto3'].mock_calls == [
+            call.client('s3'),
+            call.client().get_object(Bucket='bktname', Key='path/to/key')
+        ]
+        assert m_client.mock_calls == [
+            call.get_object(Bucket='bktname', Key='path/to/key')
+        ]
+        assert mocks['requests'].mock_calls == []
+        assert mocks['mkstemp'].mock_calls == [
+            call('ecsjobs-jname')
+        ]
+        assert mocks['chmod'].mock_calls == [
+            call('/tmp/tmpfile', S_IRUSR | S_IWUSR | S_IXUSR)
+        ]
+        assert mocks['fdopen'].mock_calls == [
+            call(m_fd, 'w'),
+            call().write('myContent'),
+            call().close()
+        ]
+
     def test_http(self):
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
         assert self.cls.exitcode is None
         assert self.cls.output is None
+        self.cls._command = []
 
         m_resp = Mock()
         type(m_resp).text = PropertyMock(return_value='foobar')
@@ -355,6 +410,51 @@ class TestLocalCommandGetScript(object):
             mocks['mkstemp'].return_value = m_fd, '/tmp/tmpfile'
             res = self.cls._get_script('http://bar')
         assert res == '/tmp/tmpfile'
+        assert self.cls.is_started is False
+        assert self.cls.is_finished is False
+        assert self.cls.exitcode is None
+        assert self.cls.output is None
+        assert mocks['boto3'].mock_calls == []
+        assert mocks['requests'].mock_calls == [
+            call.get('http://bar')
+        ]
+        assert mocks['mkstemp'].mock_calls == [
+            call('ecsjobs-jname')
+        ]
+        assert mocks['chmod'].mock_calls == [
+            call('/tmp/tmpfile', S_IRUSR | S_IWUSR | S_IXUSR)
+        ]
+        assert mocks['fdopen'].mock_calls == [
+            call(m_fd, 'w'),
+            call().write('foobar'),
+            call().close()
+        ]
+
+    def test_http_with_args(self):
+        assert self.cls.is_started is False
+        assert self.cls.is_finished is False
+        assert self.cls.exitcode is None
+        assert self.cls.output is None
+        self.cls._command = 'foobar'
+
+        m_resp = Mock()
+        type(m_resp).text = PropertyMock(return_value='foobar')
+        m_fd = Mock()
+
+        with patch.multiple(
+            pbm,
+            **{
+                'boto3': DEFAULT,
+                'requests': DEFAULT,
+                'mkstemp': DEFAULT,
+                'chmod': DEFAULT,
+                'fdopen': DEFAULT
+            }
+        ) as mocks:
+            mocks['requests'].get.return_value = m_resp
+            mocks['mkstemp'].return_value = m_fd, '/tmp/tmpfile'
+            res = self.cls._get_script('http://bar')
+        assert res == ['/tmp/tmpfile', 'foobar']
         assert self.cls.is_started is False
         assert self.cls.is_finished is False
         assert self.cls.exitcode is None

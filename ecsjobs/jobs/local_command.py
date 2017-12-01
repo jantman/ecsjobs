@@ -107,7 +107,9 @@ class LocalCommand(Job):
           of all jobs is more than an hour.
         :type cron_expression: str
         :param command: The command to execute as either a String or a List of
-          Strings, as used by :py:func:`subprocess.run`.
+          Strings, as used by :py:func:`subprocess.run`. If ``script_source`` is
+          specified and this parameter is not an empty string or empty list, it
+          will be passed as arguments to the downloaded script.
         :type command: :py:obj:`str` or :py:obj:`list`
         :param shell: Whether or not to execute the provided command through the
           shell. Corresponds to the ``shell`` argument of
@@ -118,13 +120,12 @@ class LocalCommand(Job):
           :py:func:`subprocess.run`.
         :type timeout: int
         :param script_source: A URL to retrieve an executable script from, in
-          place of ``command``. If specified, the value of ``command`` is
-          ignored. This currently supports URLs with ``http://``, ``https://``
-          or ``s3://`` schemes. HTTP and HTTPS URLs must be directly retrievable
-          without any authentication. S3 URLs will use the same credentials
-          already in use for the session. **Note** that this setting will cause
-          ecsjobs to download and execute code from a potentially untrusted
-          location.
+          place of ``command``. This currently supports URLs with ``http://``,
+          ``https://`` or ``s3://`` schemes. HTTP and HTTPS URLs must be
+          directly retrievable without any authentication. S3 URLs will use the
+          same credentials already in use for the session. **Note** that this
+          setting will cause ecsjobs to download and execute code from a
+          potentially untrusted location.
         :type script_source: str
         """
         super(LocalCommand, self).__init__(
@@ -225,4 +226,8 @@ class LocalCommand(Job):
         fh.write(content)
         fh.close()
         chmod(path, S_IRUSR | S_IWUSR | S_IXUSR)
-        return path
+        if self._command == '' or self._command == []:
+            return path
+        if isinstance(self._command, type('')):
+            self._command = [self._command]
+        return [path] + self._command
