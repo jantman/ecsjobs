@@ -130,9 +130,52 @@ class TestLocalCommandRun(object):
             )
         ]
 
-    def test_success_script(self):
+    def test_success_script_command_arr(self):
         self.cls._script_source = 's3://foo/bar'
-        self.cls._command = '/foo/bar'
+        self.cls._command = ['foo', 'bar']
+        self.frozen = None
+        self.second_dt = datetime(2017, 10, 20, 12, 35, 00)
+        self.retval = Mock(
+            spec=subprocess.CompletedProcess,
+            returncode=0, stdout=b'hello'
+        )
+
+        def se_run(*args, **kwargs):
+            self.frozen.move_to(self.second_dt)
+            return self.retval
+
+        initial_dt = datetime(2017, 10, 20, 12, 30, 00)
+        with freeze_time(initial_dt) as frozen:
+            self.frozen = frozen
+            with patch('%s.subprocess.run' % pbm) as m_run:
+                m_run.side_effect = se_run
+                with patch('%s.unlink' % pbm) as m_unlink:
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = ['/my/temp/file', 'foo', 'bar']
+                        res = self.cls.run()
+        assert res is True
+        assert self.cls._exit_code == 0
+        assert self.cls._output == 'hello'
+        assert self.cls._finished is True
+        assert self.cls._started is True
+        assert self.cls._start_time == initial_dt
+        assert self.cls._finish_time == self.second_dt
+        assert self.cls._command == ['/my/temp/file', 'foo', 'bar']
+        assert m_unlink.mock_calls == [call('/my/temp/file')]
+        assert m_gs.mock_calls == [call(self.cls, 's3://foo/bar')]
+        assert m_run.mock_calls == [
+            call(
+                ['/my/temp/file', 'foo', 'bar'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
+
+    def test_success_script_command_str(self):
+        self.cls._script_source = 's3://foo/bar'
+        self.cls._command = ''
         self.frozen = None
         self.second_dt = datetime(2017, 10, 20, 12, 35, 00)
         self.retval = Mock(
@@ -211,7 +254,7 @@ class TestLocalCommandRun(object):
             )
         ]
 
-    def test_timeout_script(self):
+    def test_timeout_script_command_str(self):
         self.cls._script_source = 's3://foo/bar'
         self.cls._command = '/foo/bar'
         self.frozen = None
@@ -245,6 +288,47 @@ class TestLocalCommandRun(object):
         assert m_run.mock_calls == [
             call(
                 '/my/temp/file',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=False,
+                timeout=None
+            )
+        ]
+
+    def test_timeout_script_command_arr(self):
+        self.cls._script_source = 's3://foo/bar'
+        self.cls._command = ['foo', 'bar']
+        self.frozen = None
+        self.second_dt = datetime(2017, 10, 20, 12, 35, 00)
+
+        def se_run(*args, **kwargs):
+            self.frozen.move_to(self.second_dt)
+            raise subprocess.TimeoutExpired(
+                ['/usr/bin/cmd', '-h'], 120, output=b'foo'
+            )
+
+        initial_dt = datetime(2017, 10, 20, 12, 30, 00)
+        with freeze_time(initial_dt) as frozen:
+            self.frozen = frozen
+            with patch('%s.subprocess.run' % pbm) as m_run:
+                m_run.side_effect = se_run
+                with patch('%s.unlink' % pbm) as m_unlink:
+                    with patch('%s._get_script' % pb, autospec=True) as m_gs:
+                        m_gs.return_value = ['/my/temp/file', 'foo', 'bar']
+                        with pytest.raises(subprocess.TimeoutExpired):
+                            self.cls.run()
+        assert self.cls._exit_code is None
+        assert self.cls._output == "foo"
+        assert self.cls._finished is True
+        assert self.cls._started is True
+        assert self.cls._start_time == initial_dt
+        assert self.cls._finish_time == self.second_dt
+        assert self.cls._command == ['/my/temp/file', 'foo', 'bar']
+        assert m_unlink.mock_calls == [call('/my/temp/file')]
+        assert m_gs.mock_calls == [call(self.cls, 's3://foo/bar')]
+        assert m_run.mock_calls == [
+            call(
+                ['/my/temp/file', 'foo', 'bar'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 shell=False,

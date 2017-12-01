@@ -177,7 +177,10 @@ class LocalCommand(Job):
             self._finished = True
             self._finish_time = datetime.now()
             if self._script_source is not None:
-                unlink(self._command)
+                if isinstance(self._command, type([])):
+                    unlink(self._command[0])
+                else:
+                    unlink(self._command)
         return self._exit_code == 0
 
     def report_description(self):
@@ -193,11 +196,14 @@ class LocalCommand(Job):
     def _get_script(self, script_url):
         """
         Download a script from HTTP/HTTPS or S3 to a temporary path, make it
-        executable, and return the path to the script.
+        executable, and return the command to execute.
 
         :param script_url: URL to download - HTTP/HTTPS or S3
         :type script_url: str
-        :return: path to the downloaded executable script
+        :return: path to the downloaded executable script if ``self._command``
+          is an empty string, empty array, or None. Otherwise, a list whose
+          first element is the path to the downloaded executable script, and
+          then contains ``self._command``.
         :rtype: str
         """
         if script_url.startswith('s3://'):
