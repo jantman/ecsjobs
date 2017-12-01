@@ -57,7 +57,8 @@ class Config(object):
     #: Default values for global configuration settings.
     _global_defaults = {
         'inter_poll_sleep_sec': 10,
-        'max_total_runtime_sec': 3600
+        'max_total_runtime_sec': 3600,
+        'email_subject': 'ECSJobs Report'
     }
 
     def __init__(self):

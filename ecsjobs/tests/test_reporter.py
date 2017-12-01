@@ -61,6 +61,8 @@ class ReportTester(object):
                 return self.from_email
             elif k == 'to_email':
                 return self.to_email
+            elif k == 'email_subject':
+                return 'MySubject'
             return None
 
         self.mock_conf.get_global.side_effect = se_conf_get
@@ -104,7 +106,7 @@ class TestRun(ReportTester):
                 },
                 Message={
                     'Subject': {
-                        'Data': 'ECSJobs Report',
+                        'Data': 'MySubject',
                         'Charset': 'utf-8'
                     },
                     'Body': {
@@ -158,7 +160,7 @@ class TestRun(ReportTester):
                 },
                 Message={
                     'Subject': {
-                        'Data': 'ECSJobs Report',
+                        'Data': 'MySubject',
                         'Charset': 'utf-8'
                     },
                     'Body': {
@@ -198,7 +200,7 @@ class TestRun(ReportTester):
                 },
                 Message={
                     'Subject': {
-                        'Data': 'ECSJobs Report',
+                        'Data': 'MySubject',
                         'Charset': 'utf-8'
                     },
                     'Body': {

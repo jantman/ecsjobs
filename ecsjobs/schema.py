@@ -88,7 +88,8 @@ class Schema(object):
                         ]
                     },
                     'inter_poll_sleep_sec': {'type': 'integer'},
-                    'max_total_runtime_sec': {'type': 'integer'}
+                    'max_total_runtime_sec': {'type': 'integer'},
+                    'email_subject': {'type': 'string'}
                 }
             }
         }

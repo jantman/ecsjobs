@@ -99,7 +99,7 @@ class Reporter(object):
                 },
                 Message={
                     'Subject': {
-                        'Data': 'ECSJobs Report',
+                        'Data': self._config.get_global('email_subject'),
                         'Charset': 'utf-8'
                     },
                     'Body': {
