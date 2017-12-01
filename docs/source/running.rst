@@ -134,7 +134,9 @@ The container definition that I use in my Task Definition for ecsjobs is as foll
         "environment": [
           {"name": "DOCKER_HOST", "value": "unix:///tmp/docker.sock"},
           {"name": "ECSJOBS_BUCKET", "value": "${var.bucket_name}"},
-          {"name": "ECSJOBS_KEY", "value": "${var.bucket_key}"}
+          {"name": "ECSJOBS_KEY", "value": "${var.bucket_key}"},
+          {"name": "AWS_REGION", "value": "us-west-2"},
+          {"name": "AWS_DEFAULT_REGION", "value": "us-west-2"}
         ],
         "essential": true,
         "mountPoints": [
