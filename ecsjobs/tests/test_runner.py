@@ -58,6 +58,7 @@ class MockArgs(object):
         self.verbose = 0
         self.ACTION = None
         self.SCHEDULES = []
+        self.only_email_if_problems = False
         for k, v in kwargs.items():
             setattr(self, k, v)
 
@@ -263,7 +264,7 @@ class TestMain(object):
         assert mocks['set_log_info'].mock_calls == [call(logging.getLogger())]
         assert mocks['Config'].mock_calls == [call()]
         assert mocks['EcsJobsRunner'].mock_calls == [
-            call(mocks['Config'].return_value),
+            call(mocks['Config'].return_value, only_email_if_problems=False),
             call().run_schedules(['foo', 'baz'])
         ]
 
@@ -279,7 +280,8 @@ class TestMain(object):
             EcsJobsRunner=DEFAULT
         ) as mocks:
             mocks['parse_args'].return_value = MockArgs(
-                ACTION='run', SCHEDULES=[], verbose=1, jobs=['joba', 'jobb']
+                ACTION='run', SCHEDULES=[], verbose=1, jobs=['joba', 'jobb'],
+                only_email_if_problems=True
             )
             main(['run', '-j', 'joba', '--job=jobb'])
         assert mocks['logger'].mock_calls == []
@@ -290,7 +292,7 @@ class TestMain(object):
         assert mocks['set_log_info'].mock_calls == [call(logging.getLogger())]
         assert mocks['Config'].mock_calls == [call()]
         assert mocks['EcsJobsRunner'].mock_calls == [
-            call(mocks['Config'].return_value),
+            call(mocks['Config'].return_value, only_email_if_problems=True),
             call().run_job_names(['joba', 'jobb'])
         ]
 

@@ -261,9 +261,13 @@ def main(argv=None):
             print(s)
         raise SystemExit(0)
     if len(args.SCHEDULES) > 0:
-        EcsJobsRunner(conf).run_schedules(args.SCHEDULES)
+        EcsJobsRunner(
+            conf, only_email_if_problems=args.only_email_if_problems
+        ).run_schedules(args.SCHEDULES)
     else:
-        EcsJobsRunner(conf).run_job_names(args.jobs)
+        EcsJobsRunner(
+            conf, only_email_if_problems=args.only_email_if_problems
+        ).run_job_names(args.jobs)
 
 
 if __name__ == "__main__":
