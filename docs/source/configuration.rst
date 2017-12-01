@@ -48,6 +48,8 @@ The global configuration file or mapping should match the following:
 
 * **from_email** - String, email address to set as FROM.
 * **to_email** - List of Strings, email notification recipients.
+* **inter_poll_sleep_sec** - *(optional)* how many seconds to sleep between each poll cycle to check the status of asynchronous jobs. Defaults to 10 seconds.
+* **max_total_runtime_sec** - *(optional)* Maximum runtime for each ecsjobs invocation, in seconds. If invocation runs longer than this amount, it will die with an error. Default is 3600 seconds (1 hour).
 
 Job Schema
 ----------
