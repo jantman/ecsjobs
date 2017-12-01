@@ -45,4 +45,7 @@ To run the "foo" schedule locally using a configuration directory at ``./conf``:
 In ECS
 ------
 
-TBD.
+Note that because of how ECS Scheduled Tasks work, you'll need to create a separate Task Definition for
+each schedule that you want ecsjobs to run. As an example, if your jobs have two different ``schedule``
+values, "daily" and "weekly", you'd need to create two separate ECS Task Definitions that differ only
+by the command they run (``run daily`` and ``run weekly``, respectively).
