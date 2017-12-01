@@ -220,13 +220,16 @@ class LocalCommand(Job):
             logger.debug('Got script:\n%s', content)
         else:
             raise RuntimeError('Error: unsupported URL scheme: %s' % script_url)
+        fmode = 'w'
+        if isinstance(content, type(b'')):
+            fmode = 'wb'
         fd, path = mkstemp('ecsjobs-%s' % self.name)
         logger.info('Writing script for %s to: %s', self.name, path)
-        fh = fdopen(fd, 'w')
+        fh = fdopen(fd, fmode)
         fh.write(content)
         fh.close()
         chmod(path, S_IRUSR | S_IWUSR | S_IXUSR)
-        if self._command == '' or self._command == []:
+        if self._command == '' or self._command == [] or self._command is None:
             return path
         if isinstance(self._command, type('')):
             self._command = [self._command]

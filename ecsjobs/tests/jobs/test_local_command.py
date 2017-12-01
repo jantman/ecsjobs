@@ -288,7 +288,7 @@ class TestLocalCommandGetScript(object):
 
         m_client = Mock()
         m_body = Mock()
-        m_body.read.return_value = 'myContent'
+        m_body.read.return_value = b'myContent'
         m_client.get_object.return_value = {
             'Body': m_body
         }
@@ -327,8 +327,8 @@ class TestLocalCommandGetScript(object):
             call('/tmp/tmpfile', S_IRUSR | S_IWUSR | S_IXUSR)
         ]
         assert mocks['fdopen'].mock_calls == [
-            call(m_fd, 'w'),
-            call().write('myContent'),
+            call(m_fd, 'wb'),
+            call().write(b'myContent'),
             call().close()
         ]
 
