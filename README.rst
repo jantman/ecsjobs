@@ -1,9 +1,9 @@
 ecsjobs
 =======
 
-.. image:: http://www.repostatus.org/badges/latest/wip.svg
-   :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
-   :target: http://www.repostatus.org/#wip
+.. image:: http://www.repostatus.org/badges/latest/active.svg
+   :alt: Project Status: Active – The project has reached a stable, usable state and is being actively developed.
+   :target: http://www.repostatus.org/#active
 
 * Documentation: `http://ecsjobs.readthedocs.io/en/latest/ <http://ecsjobs.readthedocs.io/en/latest/>`_
 * Builds: `https://travis-ci.org/jantman/ecsjobs <https://travis-ci.org/jantman/ecsjobs>`_
