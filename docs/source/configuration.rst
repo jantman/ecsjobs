@@ -60,6 +60,8 @@ Each job configuration file or mapping should match the following:
 * **name** - A unique name for the job.
 * **class_name** - The name of a :py:class:`ecsjobs.jobs.base.Job` subclass.
 * **schedule** - A string to identify which jobs to run at which times.
+* **summary_regex** - A String regular expression to use for extracting a string from the job output for use in the summary table. If there is more than one match, the last one will be used.
+* **cron_expression** - A string cron-like expression parsable by `cronex <https://github.com/ericpruitt/cronex>`_ specifying when the job should run. This has the effect of causing runs to skip this job unless the expression matches. It's recommended not to use any minute specifiers and not to use any hour specifiers if the total runtime of all jobs is more than an hour.
 
 The rest of the Job keys depend on the class. See the documentation of each
 Job subclass for the required configuration.
