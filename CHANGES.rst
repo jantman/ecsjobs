@@ -1,10 +1,14 @@
 Changelog
 =========
 
-Unreleased Changes
+0.4.0 (2018-02-25)
 ------------------
 
 * Add ``awscli`` to Docker image
+* Add new global configuration options:
+
+  * **failure_html_path** - *(optional)* a string absolute path to write the HTML email report to on disk, if sending via SES fails. If not specified, a temporary file will be used (via Python's ``tempfile.mkstemp``) and its path included in the output.
+  * **failure_command** - *(optional)* Array. A command to call if sending via SES fails. This should be an array beginning with the absolute path to the executable, suitable for passing to Python's ``subprocess.Popen()``. The content of the HTML report will be passed to the process on STDIN.
 
 0.3.0 (2017-12-01)
 ------------------

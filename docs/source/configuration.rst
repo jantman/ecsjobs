@@ -51,6 +51,8 @@ The global configuration file or mapping should match the following:
 * **inter_poll_sleep_sec** - *(optional)* how many seconds to sleep between each poll cycle to check the status of asynchronous jobs. Defaults to 10 seconds.
 * **max_total_runtime_sec** - *(optional)* Maximum runtime for each ecsjobs invocation, in seconds. If invocation runs longer than this amount, it will die with an error. Default is 3600 seconds (1 hour).
 * **email_subject** - *(optional)* a string to use for the email report subject, instead of "ECSJobs Report".
+* **failure_html_path** - *(optional)* a string absolute path to write the HTML email report to on disk, if sending via SES fails. If not specified, a temporary file will be used (via Python's ``tempfile.mkstemp``) and its path included in the output.
+* **failure_command** - *(optional)* Array. A command to call if sending via SES fails. This should be an array beginning with the absolute path to the executable, suitable for passing to Python's ``subprocess.Popen()``. The content of the HTML report will be passed to the process on STDIN.
 
 Job Schema
 ----------
