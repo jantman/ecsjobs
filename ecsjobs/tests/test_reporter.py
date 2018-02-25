@@ -35,8 +35,9 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-from unittest.mock import patch, Mock, call, DEFAULT, PropertyMock
+from unittest.mock import patch, Mock, call, DEFAULT, PropertyMock, mock_open
 from datetime import datetime, timedelta
+from subprocess import PIPE, STDOUT
 
 import pytest
 from freezegun import freeze_time
@@ -55,6 +56,8 @@ class ReportTester(object):
         self.mock_conf = Mock()
         self.from_email = 'from@example.com'
         self.to_email = ['to1@foo.com', 'to2@foo.com']
+        self.failure_html_path = None
+        self.failure_command = None
 
         def se_conf_get(k):
             if k == 'from_email':
@@ -63,6 +66,10 @@ class ReportTester(object):
                 return self.to_email
             elif k == 'email_subject':
                 return 'MySubject'
+            elif k == 'failure_html_path':
+                return self.failure_html_path
+            elif k == 'failure_command':
+                return self.failure_command
             return None
 
         self.mock_conf.get_global.side_effect = se_conf_get
@@ -90,11 +97,21 @@ class TestRun(ReportTester):
         m_excs = Mock()
         m_start_dt = Mock()
         m_end_dt = Mock()
+
+        m_open = mock_open()
         with patch('%s._make_report' % pb) as mock_mr:
-            mock_mr.return_value = 'my_html_report'
-            self.cls.run(
-                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
-            )
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    self.cls.run(
+                        m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
+                    )
         assert mock_mr.mock_calls == [
             call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
         ]
@@ -119,6 +136,10 @@ class TestRun(ReportTester):
                 ReturnPath='from@example.com'
             )
         ]
+        assert m_open.mock_calls == []
+        assert mocks['mkstemp'].mock_calls == []
+        assert mocks['Popen'].mock_calls == []
+        assert mocks['os_close'].mock_calls == []
 
     def test_run_only_if_problems(self):
         m_finished = Mock()
@@ -126,16 +147,30 @@ class TestRun(ReportTester):
         m_excs = Mock()
         m_start_dt = Mock()
         m_end_dt = Mock()
+
+        m_open = mock_open()
         with patch('%s._make_report' % pb) as mock_mr:
-            mock_mr.return_value = 'my_html_report'
-            self.cls.run(
-                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt,
-                only_email_if_problems=True
-            )
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    self.cls.run(
+                        m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt,
+                        only_email_if_problems=True
+                    )
         assert mock_mr.mock_calls == [
             call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
         ]
         assert self.client.mock_calls == []
+        assert m_open.mock_calls == []
+        assert mocks['mkstemp'].mock_calls == []
+        assert mocks['Popen'].mock_calls == []
+        assert mocks['os_close'].mock_calls == []
 
     def test_run_to_str(self):
         m_finished = Mock()
@@ -144,11 +179,21 @@ class TestRun(ReportTester):
         m_start_dt = Mock()
         m_end_dt = Mock()
         self.to_email = 'to1@foo.com'
+
+        m_open = mock_open()
         with patch('%s._make_report' % pb) as mock_mr:
-            mock_mr.return_value = 'my_html_report'
-            self.cls.run(
-                m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
-            )
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    self.cls.run(
+                        m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
+                    )
         assert mock_mr.mock_calls == [
             call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
         ]
@@ -173,8 +218,12 @@ class TestRun(ReportTester):
                 ReturnPath='from@example.com'
             )
         ]
+        assert m_open.mock_calls == []
+        assert mocks['mkstemp'].mock_calls == []
+        assert mocks['Popen'].mock_calls == []
+        assert mocks['os_close'].mock_calls == []
 
-    def test_run_exception(self):
+    def test_run_exception_default(self):
         m_finished = Mock()
         m_unfinished = Mock()
         m_excs = Mock()
@@ -182,12 +231,23 @@ class TestRun(ReportTester):
         m_end_dt = Mock()
 
         self.client.send_email.side_effect = RuntimeError('foo')
+        self.failure_html_path = None
+        m_open = mock_open()
         with patch('%s._make_report' % pb) as mock_mr:
-            mock_mr.return_value = 'my_html_report'
-            with pytest.raises(RuntimeError) as exc:
-                self.cls.run(
-                    m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt
-                )
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    with pytest.raises(RuntimeError) as exc:
+                        self.cls.run(
+                            m_finished, m_unfinished, m_excs, m_start_dt,
+                            m_end_dt
+                        )
         assert str(exc.value) == 'foo'
         assert mock_mr.mock_calls == [
             call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
@@ -213,6 +273,217 @@ class TestRun(ReportTester):
                 ReturnPath='from@example.com'
             )
         ]
+        assert m_open.mock_calls == [
+            call('/tmp/path', 'w'),
+            call().__enter__(),
+            call().write('my_html_report'),
+            call().__exit__(None, None, None)
+        ]
+        assert mocks['mkstemp'].mock_calls == [
+            call(prefix='ecsjobs', text=True, suffix='.html')
+        ]
+        assert mocks['Popen'].mock_calls == []
+        assert mocks['os_close'].mock_calls == [call(999)]
+
+    def test_run_exception_failure_cmd(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+
+        self.client.send_email.side_effect = RuntimeError('foo')
+        self.failure_command = ['/bin/something', 'foo']
+        m_open = mock_open()
+        m_popen = Mock()
+        m_popen.communicate.return_value = ('my_output', None)
+        type(m_popen).returncode = 0
+        with patch('%s._make_report' % pb) as mock_mr:
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    mocks['Popen'].return_value = m_popen
+                    with pytest.raises(RuntimeError) as exc:
+                        self.cls.run(
+                            m_finished, m_unfinished, m_excs, m_start_dt,
+                            m_end_dt
+                        )
+        assert str(exc.value) == 'foo'
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com', 'to2@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'MySubject',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+        assert m_open.mock_calls == [
+            call('/tmp/path', 'w'),
+            call().__enter__(),
+            call().write('my_html_report'),
+            call().__exit__(None, None, None)
+        ]
+        assert mocks['mkstemp'].mock_calls == [
+            call(prefix='ecsjobs', text=True, suffix='.html')
+        ]
+        assert mocks['Popen'].mock_calls == [
+            call(
+                '/bin/something', 'foo', stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                universal_newlines=True
+            ),
+            call().communicate(input='my_html_report', timeout=120)
+        ]
+        assert mocks['os_close'].mock_calls == [call(999)]
+
+    def test_run_exception_failure_cmd_failure(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+
+        self.client.send_email.side_effect = RuntimeError('foo')
+        self.failure_command = ['/bin/something', 'foo']
+        m_open = mock_open()
+        with patch('%s._make_report' % pb) as mock_mr:
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    mocks['Popen'].return_value = RuntimeError()
+                    with pytest.raises(RuntimeError) as exc:
+                        self.cls.run(
+                            m_finished, m_unfinished, m_excs, m_start_dt,
+                            m_end_dt
+                        )
+        assert str(exc.value) == 'foo'
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com', 'to2@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'MySubject',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+        assert m_open.mock_calls == [
+            call('/tmp/path', 'w'),
+            call().__enter__(),
+            call().write('my_html_report'),
+            call().__exit__(None, None, None)
+        ]
+        assert mocks['mkstemp'].mock_calls == [
+            call(prefix='ecsjobs', text=True, suffix='.html')
+        ]
+        assert mocks['Popen'].mock_calls == [
+            call(
+                '/bin/something', 'foo', stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                universal_newlines=True
+            )
+        ]
+        assert mocks['os_close'].mock_calls == [call(999)]
+
+    def test_run_failure_path(self):
+        m_finished = Mock()
+        m_unfinished = Mock()
+        m_excs = Mock()
+        m_start_dt = Mock()
+        m_end_dt = Mock()
+
+        self.client.send_email.side_effect = RuntimeError('foo')
+        self.failure_html_path = '/fail/path'
+        m_open = mock_open()
+        with patch('%s._make_report' % pb) as mock_mr:
+            with patch('%s.open' % pbm, m_open, create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    Popen=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    mock_mr.return_value = 'my_html_report'
+                    with pytest.raises(RuntimeError) as exc:
+                        self.cls.run(
+                            m_finished, m_unfinished, m_excs, m_start_dt,
+                            m_end_dt
+                        )
+        assert str(exc.value) == 'foo'
+        assert mock_mr.mock_calls == [
+            call(m_finished, m_unfinished, m_excs, m_start_dt, m_end_dt)
+        ]
+        assert self.client.mock_calls == [
+            call.send_email(
+                Source='from@example.com',
+                Destination={
+                    'ToAddresses': ['to1@foo.com', 'to2@foo.com']
+                },
+                Message={
+                    'Subject': {
+                        'Data': 'MySubject',
+                        'Charset': 'utf-8'
+                    },
+                    'Body': {
+                        'Html': {
+                            'Data': 'my_html_report',
+                            'Charset': 'utf-8'
+                        }
+                    }
+                },
+                ReturnPath='from@example.com'
+            )
+        ]
+        assert m_open.mock_calls == [
+            call('/fail/path', 'w'),
+            call().__enter__(),
+            call().write('my_html_report'),
+            call().__exit__(None, None, None)
+        ]
+        assert mocks['mkstemp'].mock_calls == []
+        assert mocks['os_close'].mock_calls == []
+        assert mocks['Popen'].mock_calls == []
 
 
 class TestMakeReport(ReportTester):

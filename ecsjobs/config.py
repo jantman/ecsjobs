@@ -58,7 +58,9 @@ class Config(object):
     _global_defaults = {
         'inter_poll_sleep_sec': 10,
         'max_total_runtime_sec': 3600,
-        'email_subject': 'ECSJobs Report'
+        'email_subject': 'ECSJobs Report',
+        'failure_html_path': None,
+        'failure_command': None
     }
 
     def __init__(self):

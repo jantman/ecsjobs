@@ -35,11 +35,14 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
+from os import close as os_close
 import logging
 from getpass import getuser
 from socket import gethostname
 from datetime import datetime
 from html import escape
+from tempfile import mkstemp
+from subprocess import Popen, PIPE, STDOUT
 
 import boto3
 
@@ -111,12 +114,40 @@ class Reporter(object):
                 },
                 ReturnPath=self._config.get_global('from_email'),
             )
+            logger.info('Sent email via SES: %s', resp)
         except Exception:
             logger.error('ERROR sending email to %s via SES. Email Body:\n%s',
                          self._config.get_global('to_email'), report,
                          exc_info=True)
+            failure_cmd = self._config.get_global('failure_command')
+            if failure_cmd is not None:
+                try:
+                    p = Popen(
+                        *failure_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                        universal_newlines=True
+                    )
+                    out = p.communicate(input=report, timeout=120)[0]
+                    logger.warning(
+                        'Failure command (%s) exited %s with output:\n%s',
+                        failure_cmd, p.returncode, out
+                    )
+                except Exception:
+                    logger.error(
+                        'Exception while running failure_cmd %s', failure_cmd,
+                        exc_info=True
+                    )
+            failure_path = self._config.get_global('failure_html_path')
+            if failure_path is None:
+                fd, path = mkstemp(prefix='ecsjobs', text=True, suffix='.html')
+                with open(path, 'w') as fh:
+                    fh.write(report)
+                os_close(fd)
+                logger.warning('HTML report written to: %s', path)
+            else:
+                with open(failure_path, 'w') as fh:
+                    fh.write(report)
+                logger.warning('HTML report written to: %s', failure_path)
             raise
-        logger.info('Sent email via SES: %s', resp)
 
     def _make_report(self, finished, unfinished, excs, start_dt, end_dt):
         """

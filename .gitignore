@@ -67,3 +67,4 @@ include/
 .idea/
 man/
 results/
+.pytest_cache
