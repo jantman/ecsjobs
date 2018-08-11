@@ -36,6 +36,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 """
 
 from unittest.mock import patch, call, Mock, DEFAULT, mock_open
+from freezegun import freeze_time
 
 import pytest
 
@@ -568,6 +569,27 @@ class TestValidate(ConfigTester):
         with patch('%s.Schema' % pbm, autospec=True) as m_schema:
             self.cls._validate_config()
         assert self.cls._global_conf == self.cls._raw_conf['global']
+        assert m_schema.mock_calls == [
+            call(),
+            call().validate(self.cls._raw_conf)
+        ]
+
+    @freeze_time('2017-11-23 12:34:56')
+    def test_validate_failure_html_path_date(self):
+        self.cls._raw_conf = {
+            'global': {
+                'foo': 'bar',
+                'failure_html_path': '/foo/bar/{date}.html'
+            },
+            'jobs': ['one', 'two']
+        }
+        assert self.cls._global_conf == {}
+        with patch('%s.Schema' % pbm, autospec=True) as m_schema:
+            self.cls._validate_config()
+        assert self.cls._global_conf == {
+            'foo': 'bar',
+            'failure_html_path': '/foo/bar/2017-11-23T12-34-56.html'
+        }
         assert m_schema.mock_calls == [
             call(),
             call().validate(self.cls._raw_conf)
