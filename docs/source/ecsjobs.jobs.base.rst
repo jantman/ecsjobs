@@ -1,5 +1,5 @@
-ecsjobs\.jobs\.base module
-==========================
+ecsjobs.jobs.base module
+========================
 
 .. automodule:: ecsjobs.jobs.base
     :members:

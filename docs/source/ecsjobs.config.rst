@@ -1,5 +1,5 @@
-ecsjobs\.config module
-======================
+ecsjobs.config module
+=====================
 
 .. automodule:: ecsjobs.config
     :members:

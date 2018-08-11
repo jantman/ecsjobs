@@ -1,5 +1,5 @@
-ecsjobs\.version module
-=======================
+ecsjobs.version module
+======================
 
 .. automodule:: ecsjobs.version
     :members:
