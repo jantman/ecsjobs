@@ -126,7 +126,7 @@ class Reporter(object):
                         *failure_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                         universal_newlines=True
                     )
-                    out = p.communicate(input=report, timeout=120)[0]
+                    out = p.communicate(input='\n\n%s' % report, timeout=120)[0]
                     logger.warning(
                         'Failure command (%s) exited %s with output:\n%s',
                         failure_cmd, p.returncode, out

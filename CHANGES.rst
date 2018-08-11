@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.4.1 (2018-08-11)
+------------------
+
+* Add leading newlines when passing report to ``failure_command``
+
+
 0.4.0 (2018-02-25)
 ------------------
 

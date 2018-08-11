@@ -353,7 +353,7 @@ class TestRun(ReportTester):
                 '/bin/something', 'foo', stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                 universal_newlines=True
             ),
-            call().communicate(input='my_html_report', timeout=120)
+            call().communicate(input='\n\nmy_html_report', timeout=120)
         ]
         assert mocks['os_close'].mock_calls == [call(999)]
 
