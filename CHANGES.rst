@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.4.1 (2018-08-11)
+------------------
+
+* Add leading newlines when passing report to ``failure_command``
+* In the ``failure_html_path`` global config setting, the string ``{date}`` will be replaced with the current datetime (at time of config load) in ``%Y-%m-%dT%H-%M-%S`` format.
+
 0.4.0 (2018-02-25)
 ------------------
 

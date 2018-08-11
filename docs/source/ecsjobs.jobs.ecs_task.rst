@@ -1,5 +1,5 @@
-ecsjobs\.jobs\.ecs\_task module
-===============================
+ecsjobs.jobs.ecs\_task module
+=============================
 
 .. automodule:: ecsjobs.jobs.ecs_task
     :members:

@@ -39,6 +39,7 @@ import os
 import logging
 import glob
 from copy import copy, deepcopy
+from datetime import datetime
 
 import yaml
 import boto3
@@ -293,6 +294,12 @@ class Config(object):
         """
         Schema().validate(self._raw_conf)
         self._global_conf = self._raw_conf['global']
+        if self._global_conf.get('failure_html_path', None) is not None:
+            self._global_conf[
+                'failure_html_path'
+            ] = self._global_conf[
+                'failure_html_path'
+            ].format(date=datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))
 
     def _make_jobs(self):
         """

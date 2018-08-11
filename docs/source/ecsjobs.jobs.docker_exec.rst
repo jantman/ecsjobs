@@ -1,5 +1,5 @@
-ecsjobs\.jobs\.docker\_exec module
-==================================
+ecsjobs.jobs.docker\_exec module
+================================
 
 .. automodule:: ecsjobs.jobs.docker_exec
     :members:

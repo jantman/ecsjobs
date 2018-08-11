@@ -1,5 +1,5 @@
-ecsjobs\.jobs package
-=====================
+ecsjobs.jobs package
+====================
 
 .. automodule:: ecsjobs.jobs
     :members:

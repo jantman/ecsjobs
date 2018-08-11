@@ -1,5 +1,5 @@
-ecsjobs\.schema module
-======================
+ecsjobs.schema module
+=====================
 
 .. automodule:: ecsjobs.schema
     :members:

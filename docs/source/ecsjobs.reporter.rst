@@ -1,5 +1,5 @@
-ecsjobs\.reporter module
-========================
+ecsjobs.reporter module
+=======================
 
 .. automodule:: ecsjobs.reporter
     :members:

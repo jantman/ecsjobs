@@ -1,5 +1,5 @@
-ecsjobs\.runner module
-======================
+ecsjobs.runner module
+=====================
 
 .. automodule:: ecsjobs.runner
     :members:
