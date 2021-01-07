@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.4.2 (2021-01-06)
+------------------
+
+* Relax PyYAML version in order to work with Python 3.9.
+
 0.4.1 (2018-08-11)
 ------------------
 

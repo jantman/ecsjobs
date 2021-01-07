@@ -46,7 +46,7 @@ requires = [
     'cronex==0.1.0',
     'docker>=2.0.0,<3.0.0',
     'jsonschema>=2.0.0,<3.0.0',
-    'PyYAML>=3.0,<4.0',
+    'PyYAML>=3.0',
     'requests>=2.0.0,<3.0.0'
 ]
 

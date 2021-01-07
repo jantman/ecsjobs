@@ -68,3 +68,4 @@ include/
 man/
 results/
 .pytest_cache
+pyvenv.cfg
