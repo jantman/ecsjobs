@@ -39,6 +39,7 @@ from unittest.mock import patch, call, Mock, DEFAULT, mock_open
 from freezegun import freeze_time
 
 import pytest
+import yaml
 
 from ecsjobs.config import Config
 
@@ -456,7 +457,7 @@ class TestGetYamlFromS3(ConfigTester):
         ]
         assert m_obj.mock_calls == [call.get()]
         assert m_body.mock_calls == [call.read()]
-        assert m_load.mock_calls == [call(content)]
+        assert m_load.mock_calls == [call(content, Loader=yaml.FullLoader)]
 
     def test_no_object(self):
         content = "foo: bar\nbaz: 123\n"
@@ -523,7 +524,7 @@ class TestGetYamlFromS3(ConfigTester):
         ]
         assert m_obj.mock_calls == [call.get()]
         assert m_body.mock_calls == [call.read()]
-        assert m_load.mock_calls == [call(content)]
+        assert m_load.mock_calls == [call(content, Loader=yaml.FullLoader)]
 
 
 class TestScheduleNames(ConfigTester):

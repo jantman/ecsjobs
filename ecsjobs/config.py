@@ -202,7 +202,7 @@ class Config(object):
         :rtype: dict
         """
         with open(path, 'r') as fh:
-            return yaml.load(fh)
+            return yaml.load(fh, Loader=yaml.FullLoader)
 
     def _key_is_yaml(self, key):
         """
@@ -276,7 +276,7 @@ class Config(object):
                 )
             )
         try:
-            res = yaml.load(body)
+            res = yaml.load(body, Loader=yaml.FullLoader)
         except Exception:
             logger.error('Unable to load YAML from s3://%s/%s', bucket.name,
                          key, exc_info=True)

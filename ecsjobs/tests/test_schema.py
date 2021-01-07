@@ -124,7 +124,7 @@ class TestValidateExamples(object):
           schedule: foo
           command: uptime
         """)
-        conf = yaml.load(config_yaml)
+        conf = yaml.load(config_yaml, Loader=yaml.FullLoader)
         Schema().validate(conf)
 
     def test_local_command_missing_schedule(self):
@@ -142,7 +142,7 @@ class TestValidateExamples(object):
           class_name: LocalCommand
           schedule: foo
         """)
-        conf = yaml.load(config_yaml)
+        conf = yaml.load(config_yaml, Loader=yaml.FullLoader)
         with pytest.raises(ValidationError) as exc:
             Schema().validate(conf)
         assert list(exc.value.relative_path) == ['jobs', 0]

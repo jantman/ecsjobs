@@ -35,5 +35,5 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-VERSION = '0.4.2'
+VERSION = '0.4.3'
 PROJECT_URL = 'https://github.com/jantman/ecsjobs'
