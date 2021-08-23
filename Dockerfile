@@ -9,6 +9,8 @@ ARG whlname
 
 ADD dist/$whlname /tmp/
 
+RUN apk add rsnapshot
+
 RUN pip install -U pip \
   && mkdir -p /root/.aws \
   && pip install /tmp/$whlname \
