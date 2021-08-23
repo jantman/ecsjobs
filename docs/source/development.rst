@@ -53,12 +53,12 @@ Release Checklist
 
     * ``twine upload dist/*``
 
-9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag.
+9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag and ``export TIMESTAMP=<generated timestamp tag>``.
 10. Re-tag the generated Docker image with the version and "latest" and then push to Docker Hub:
 
-   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
+   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
    * ``docker push jantman/ecsjobs:$ECSJOBS_VER``
-   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:latest``
+   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:latest``
    * ``docker push jantman/ecsjobs:latest``
 
 11. On GitHub, create a release for the tag. Run ``pandoc -f rst -t markdown_github CHANGES.rst`` to convert CHANGES.rst to Markdown, and use the appropriate section for the GitHub release description.
