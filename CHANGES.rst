@@ -1,9 +1,10 @@
 Changelog
 =========
 
-0.5.0 (2021-08-23)
+1.0.0 (2021-08-23)
 ------------------
 
+* Bump to 1.0.0 since I've been using this for years
 * Build and test against Python 3.9; build Docker image off of Python 3.9
 * Add ``rsnapshot`` apk to Docker image
 * Updates for new pytest version
