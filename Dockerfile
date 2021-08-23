@@ -1,4 +1,4 @@
-FROM python:3.6.3-alpine3.4
+FROM python:3.9-alpine3.14
 MAINTAINER jason@jasonantman.com
 
 # for labeling image at build time
