@@ -12,25 +12,17 @@ Installing for Development
 
 To setup ecsjobs for development:
 
-1. Fork the `ecsjobs <https://github.com/jantman/ecsjobs>`_ repository on GitHub
+1. Fork the `ecsjobs <https://github.com/jantman/ecsjobs>`_ repository on GitHub and clone it locally; ``cd ecsjobs``.
 
-2. Create a ``virtualenv`` to run the code in:
-
-.. code-block:: bash
-
-    $ virtualenv ecsjobs
-    $ cd ecsjobs
-    $ source bin/activate
-
-3. Install your fork in the virtualenv as an editable git clone and install development dependencies:
+2. Create a ``virtualenv`` to run the code in and install it:
 
 .. code-block:: bash
 
-    $ pip install -e git+git@github.com:YOUR_NAME/ecsjobs.git#egg=ecsjobs
-    $ cd src/ecsjobs
-    $ pip install tox
+    $ virtualenv venv
+    $ source venv/bin/activate
+    $ python setup.py develop
 
-4. Check out a new git branch. If you're working on a GitHub issue you opened, your
+3. Check out a new git branch. If you're working on a GitHub issue you opened, your
    branch should be called "issues/N" where N is the issue number.
 
 .. _development.release_checklist:
@@ -61,12 +53,12 @@ Release Checklist
 
     * ``twine upload dist/*``
 
-9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag.
+9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag and ``export TIMESTAMP=<generated timestamp tag>``.
 10. Re-tag the generated Docker image with the version and "latest" and then push to Docker Hub:
 
-   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
+   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
    * ``docker push jantman/ecsjobs:$ECSJOBS_VER``
-   * ``docker tag jantman/ecsjobs:TIMESTAMP jantman/ecsjobs:latest``
+   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:latest``
    * ``docker push jantman/ecsjobs:latest``
 
 11. On GitHub, create a release for the tag. Run ``pandoc -f rst -t markdown_github CHANGES.rst`` to convert CHANGES.rst to Markdown, and use the appropriate section for the GitHub release description.

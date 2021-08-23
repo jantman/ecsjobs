@@ -2,14 +2,15 @@ ecsjobs.jobs package
 ====================
 
 .. automodule:: ecsjobs.jobs
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Submodules
 ----------
 
 .. toctree::
+   :maxdepth: 4
 
    ecsjobs.jobs.base
    ecsjobs.jobs.docker_exec
@@ -17,4 +18,3 @@ Submodules
    ecsjobs.jobs.ecs_docker_exec
    ecsjobs.jobs.ecs_task
    ecsjobs.jobs.local_command
-

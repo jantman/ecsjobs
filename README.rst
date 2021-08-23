@@ -6,7 +6,7 @@ ecsjobs
    :target: http://www.repostatus.org/#active
 
 * Documentation: `http://ecsjobs.readthedocs.io/en/latest/ <http://ecsjobs.readthedocs.io/en/latest/>`_
-* Builds: `https://travis-ci.org/jantman/ecsjobs <https://travis-ci.org/jantman/ecsjobs>`_
+* Builds: `https://app.travis-ci.com/github/jantman/ecsjobs <https://app.travis-ci.com/github/jantman/ecsjobs>`_
 
 A scheduled job wrapper for ECS, focused on email reporting and adding docker exec and local command abilities.
 

@@ -278,8 +278,8 @@ class TestDockerExec(object):
         })
         mock_docker = MagicMock()
         mock_docker.containers.list.return_value = [
-                m_c1, m_c2, m_c3, m_c4, m_c5
-            ]
+            m_c1, m_c2, m_c3, m_c4, m_c5
+        ]
         with patch('%s.docker.from_env' % pbm) as m_from_env:
             m_from_env.return_value = mock_docker
             res = self.cls._find_container()

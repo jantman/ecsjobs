@@ -51,7 +51,7 @@ requires = [
 ]
 
 classifiers = [
-    'Development Status :: 1 - Planning',
+    'Development Status :: 6 - Mature',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: GNU Affero General Public License '

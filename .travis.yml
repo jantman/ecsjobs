@@ -7,9 +7,9 @@ cache:
 
 matrix:
   include:
-    - python: "3.6"
-      env: TOXENV=py36 PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
-    - python: "3.6"
+    - python: "3.9"
+      env: TOXENV=py39 PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
+    - python: "3.9"
       env: TOXENV=docs PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
 
 install:

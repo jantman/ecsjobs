@@ -246,8 +246,8 @@ class EcsTask(Job):
                 logger.warning('Exception getting CloudWatch logs for task %s'
                                'container %s', taskid, c['name'], exc_info=True)
                 self._output += 'Exception getting output: %s: %s\n' % (
-                                    exc.__class__.__name__, exc
-                                )
+                    exc.__class__.__name__, exc
+                )
         return True
 
     def _output_for_task_container(self, taskid, cont_name):
