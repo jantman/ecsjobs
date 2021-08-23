@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.5.0 (2021-08-23)
+------------------
+
+* Build and test against Python 3.9; build Docker image off of Python 3.9
+* Add ``rsnapshot`` apk to Docker image
+* Updates for new pytest version
+
 0.4.3 (2021-01-06)
 ------------------
 
