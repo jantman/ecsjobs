@@ -34,3 +34,18 @@ AUTHORS:
 Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
+
+import sys
+from unittest.mock import call
+
+
+def mock_open_exit_calls() -> list:
+    """
+    Return the calls a :py:func:`unittest.mock.mock_open` handle records
+    when a ``with`` block using it exits. Python 3.13 and later also record
+    a ``close()`` after ``__exit__``.
+    """
+    calls = [call().__exit__(None, None, None)]
+    if sys.version_info >= (3, 13):
+        calls.append(call().close())
+    return calls

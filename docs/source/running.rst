@@ -38,7 +38,7 @@ Note that when running in this method, the ``LocalCommand`` class runs commands 
 Locally via PyPI
 ----------------
 
-To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, install the ``ecsjobs`` package from PyPI (Python 3.14 or newer is required) into a virtualenv, for example with `uv <https://docs.astral.sh/uv/>`_:
+To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, install the ``ecsjobs`` package from PyPI (Python 3.8 or newer is required) into a virtualenv, for example with `uv <https://docs.astral.sh/uv/>`_:
 
 .. code-block:: bash
 

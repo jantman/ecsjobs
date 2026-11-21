@@ -44,6 +44,7 @@ from freezegun import freeze_time
 
 from ecsjobs.reporter import Reporter
 from ecsjobs.jobs.base import Job
+from ecsjobs.tests import mock_open_exit_calls
 
 pbm = 'ecsjobs.reporter'
 pb = '%s.Reporter' % pbm
@@ -276,10 +277,8 @@ class TestRun(ReportTester):
         assert m_open.mock_calls == [
             call('/tmp/path', 'w'),
             call().__enter__(),
-            call().write('my_html_report'),
-            call().__exit__(None, None, None),
-            call().close()
-        ]
+            call().write('my_html_report')
+        ] + mock_open_exit_calls()
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
         ]
@@ -343,10 +342,8 @@ class TestRun(ReportTester):
         assert m_open.mock_calls == [
             call('/tmp/path', 'w'),
             call().__enter__(),
-            call().write('my_html_report'),
-            call().__exit__(None, None, None),
-            call().close()
-        ]
+            call().write('my_html_report')
+        ] + mock_open_exit_calls()
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
         ]
@@ -432,10 +429,8 @@ class TestRun(ReportTester):
         assert m_open.mock_calls == [
             call('/tmp/path', 'w'),
             call().__enter__(),
-            call().write('my_html_report'),
-            call().__exit__(None, None, None),
-            call().close()
-        ]
+            call().write('my_html_report')
+        ] + mock_open_exit_calls()
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
         ]
@@ -500,10 +495,8 @@ class TestRun(ReportTester):
         assert m_open.mock_calls == [
             call('/fail/path', 'w'),
             call().__enter__(),
-            call().write('my_html_report'),
-            call().__exit__(None, None, None),
-            call().close()
-        ]
+            call().write('my_html_report')
+        ] + mock_open_exit_calls()
         assert mocks['mkstemp'].mock_calls == []
         assert mocks['os_close'].mock_calls == []
         assert mocks['Popen'].mock_calls == []

@@ -10,7 +10,7 @@ Any and all contributions are welcome.
 Installing for Development
 --------------------------
 
-ecsjobs requires Python 3.14 or newer and uses `uv <https://docs.astral.sh/uv/>`_ to manage its environment.
+ecsjobs supports Python 3.8 through 3.14 and uses `uv <https://docs.astral.sh/uv/>`_ to manage its environment.
 
 1. Fork the `ecsjobs <https://github.com/jantman/ecsjobs>`_ repository on GitHub and clone it locally; ``cd ecsjobs``.
 
@@ -28,7 +28,7 @@ ecsjobs requires Python 3.14 or newer and uses `uv <https://docs.astral.sh/uv/>`
 Tests, Lint and Docs
 --------------------
 
-All of these are run in CI by ``.github/workflows/tests.yml``.
+All of these are run in CI by ``.github/workflows/tests.yml``. The tests run on every supported Python version with the locked dependencies, and on the oldest supported Python with the lowest dependency versions that ``pyproject.toml`` allows (``uv pip install --resolution lowest-direct -e .`` and then ``uv pip install --group dev``, in a fresh virtualenv).
 
 * Lint: ``uv run ruff check``
 * Tests: ``uv run pytest``. Test coverage must stay at 100% (this is enforced). To run a single test, use ``uv run pytest ecsjobs/tests/test_config.py::TestClass::test_name``.
