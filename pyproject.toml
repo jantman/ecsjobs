@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ecsjobs"
-version = "1.1.1"
+version = "2.0.0"
 description = "A scheduled job wrapper for ECS, focused on email reporting and adding docker exec and local command abilities."
 readme = "README.rst"
 requires-python = ">=3.14"
