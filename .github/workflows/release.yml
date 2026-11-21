@@ -1,0 +1,234 @@
+# Releases are driven by `version` in pyproject.toml: when a push to master
+# carries a version greater than the latest GitHub release, this verifies the
+# commit, publishes to PyPI, pushes ghcr.io/jantman/ecsjobs, and creates the
+# (bare, e.g. `2.0.0`) tag and GitHub release. Never tag manually.
+#
+# Job order puts PyPI, the only step that cannot be undone, after all
+# verification: check-version -> verify -> pypi -> ghcr -> github-release.
+#
+# Partial failure: use "Re-run failed jobs". Jobs that succeeded are not re-run
+# and check-version's outputs carry over. If the pypi job itself is re-run
+# after files reached PyPI, it drops the files already there and uploads only
+# the rest (or nothing); ghcr re-pushes the same tags; github-release skips if
+# the release already exists.
+#
+# One-time setup: PyPI trusted publisher (owner jantman, repo ecsjobs,
+# workflow release.yml, environment pypi) and a `pypi` environment in the repo.
+name: release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+# Serialize releases; never cancel one part-way.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare pyproject version to latest release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          # No fallback on purpose: a failed lookup must fail the run, not
+          # look like "nothing released yet" and republish. Tags are bare.
+          LATEST=$(gh release view --json tagName -q .tagName)
+          LATEST=${LATEST#v}
+          HIGHER=$(printf '%s\n%s\n' "$LATEST" "$CURRENT" | sort -V | tail -n1)
+          if [ "$HIGHER" = "$CURRENT" ] && [ "$CURRENT" != "$LATEST" ]; then
+            SHOULD=true
+          else
+            SHOULD=false
+          fi
+          echo "current=$CURRENT latest=$LATEST should_release=$SHOULD"
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "should_release=$SHOULD" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # Exact pin: setup-uv publishes no floating major tags after v7.
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          overwrite: true # so a re-run of this job can re-upload
+
+      - name: Build image
+        run: docker build -t ecsjobs:release-verify .
+
+      - name: Smoke test image
+        run: dev/docker_smoke_test.sh ecsjobs:release-verify
+
+  pypi:
+    needs: [check-version, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ecsjobs/${{ needs.check-version.outputs.version }}/
+    permissions:
+      id-token: write # trusted publishing and PEP 740 attestations
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      # Makes a re-run of this job safe after a full or partial upload.
+      # Chosen over the action's skip-existing, which its maintainers advise
+      # against and which still fails on an already-uploaded sdist.
+      - name: Drop files already on PyPI
+        id: pending
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          if curl -fsS -o "$RUNNER_TEMP/pypi.json" \
+              "https://pypi.org/pypi/ecsjobs/$VERSION/json"; then
+            # A first attempt that finds the version on PyPI is a different
+            # commit from the one that uploaded it; continuing would publish
+            # an image and tag that do not match the PyPI files.
+            if [ "$RUN_ATTEMPT" = "1" ]; then
+              echo "::error::$VERSION is already on PyPI but has no GitHub release. Re-run the failed jobs of the run that uploaded it."
+              exit 1
+            fi
+            for f in $(jq -r '.urls[].filename' "$RUNNER_TEMP/pypi.json"); do
+              if [ -e "dist/$f" ]; then
+                echo "already on PyPI: $f"
+                rm "dist/$f"
+              fi
+            done
+          fi
+          if [ -n "$(ls -A dist)" ]; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+          fi
+          ls -l dist
+
+      - name: Publish to PyPI
+        if: steps.pending.outputs.upload == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  ghcr:
+    needs: [check-version, pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR names must be lowercase; github.repository keeps the owner's case.
+      - name: Lowercase image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      # Build into the local daemon and smoke-test it, then push from the same
+      # builder: the push step is fully cached, so the pushed layers are the
+      # ones just tested, plus labels. (An sbom attestation cannot be loaded
+      # into the daemon, hence two steps rather than one.)
+      - name: Build image for test
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ecsjobs:release-test
+
+      - name: Smoke test image
+        run: dev/docker_smoke_test.sh ecsjobs:release-test
+
+      - name: Push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          sbom: true
+          labels: |
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.check-version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ needs.check-version.outputs.version }}
+            ${{ steps.image.outputs.name }}:latest
+
+  github-release:
+    needs: [check-version, ghcr]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # creates the tag and release
+    steps:
+      - name: Create tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "release $VERSION already exists; nothing to do"
+            exit 0
+          fi
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          NOTES=$(gh api "repos/$GH_REPO/releases/generate-notes" \
+            -f tag_name="$VERSION" -f target_commitish="$GITHUB_SHA" \
+            --jq .body)
+          {
+            printf '%s\n' "$NOTES"
+            printf '\n---\n\n## Docker image\n\n```bash\n'
+            printf 'docker pull %s:%s\n' "$IMAGE" "$VERSION"
+            printf '```\n'
+            printf '\n## Python package\n\n'
+            printf 'https://pypi.org/project/ecsjobs/%s/\n' "$VERSION"
+          } > "$RUNNER_TEMP/release_notes.md"
+          gh release create "$VERSION" --target "$GITHUB_SHA" \
+            --title "$VERSION" --notes-file "$RUNNER_TEMP/release_notes.md"
