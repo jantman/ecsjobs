@@ -24,6 +24,20 @@ Docs: https://jantman.github.io/ecsjobs/
 - `docs/source/`: Sphinx docs (configuration, running, development, API).
 - `.github/workflows/`: CI (tests), docs deploy, and release.
 
+## Python and dependency support
+
+- Supported: Python 3.8 through 3.14 (`requires-python = ">=3.8"`; the
+  floor is set by `importlib.metadata`). The Docker image uses 3.14.
+- The `test` matrix in `.github/workflows/tests.yml` must list exactly the
+  versions in the pyproject `Programming Language :: Python :: 3.X`
+  classifiers; change requires-python, classifiers, ruff `target-version`
+  and the matrix together.
+- Dependency lower bounds are tested floors: the `lowest` CI leg installs
+  them on the oldest Python with `--resolution lowest-direct`. Only raise
+  or lower a floor with a run that proves it.
+- `uv.lock` forks by Python version; keep `uv sync --locked --all-groups`
+  working on every supported version.
+
 ## Conventions
 
 - 80-column lines; ruff rules E/F/W.

@@ -14,9 +14,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Keep the python list in step with the "Programming Language :: Python ::
+  # 3.X" classifiers and requires-python in pyproject.toml.
   test:
+    name: test (${{ matrix.python }}, ${{ matrix.deps }} deps)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        deps: [locked]
+        include:
+          # The declared dependency floors, on the oldest supported Python.
+          - python: "3.8"
+            deps: lowest
     steps:
       - uses: actions/checkout@v7
 
@@ -24,26 +36,52 @@ jobs:
       # major tags after v7, so `@v10` does not resolve.
       - uses: astral-sh/setup-uv@v10.4.0
         with:
-          python-version: "3.14"
+          python-version: ${{ matrix.python }}
 
       # --locked fails if uv.lock has drifted from pyproject.toml.
+      - name: Install dependencies
+        if: ${{ matrix.deps == 'locked' }}
+        run: uv sync --locked --all-groups
+
+      # lowest-direct would also pick the oldest (unpinned) test tools, so
+      # install the package at its dependency floors first, then add the dev
+      # group, which leaves the already-satisfied floors alone.
+      - name: Install lowest declared dependencies
+        if: ${{ matrix.deps == 'lowest' }}
+        run: |
+          uv venv
+          uv pip install --resolution lowest-direct -e .
+          uv pip install --group dev
+          uv pip list
+
+      # Enforces 100% coverage (pyproject) on every leg and writes
+      # coverage.xml.
+      - name: Test
+        run: uv run --no-sync pytest
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-${{ matrix.python }}-${{ matrix.deps }}
+          path: coverage.xml
+          if-no-files-found: warn
+          retention-days: 7
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: "3.14"
+
       - name: Install dependencies
         run: uv sync --locked --all-groups
 
       - name: Lint
         run: uv run ruff check
-
-      # Enforces 100% coverage (pyproject) and writes coverage.xml.
-      - name: Test
-        run: uv run pytest
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: coverage
-          path: coverage.xml
-          if-no-files-found: warn
-          retention-days: 7
 
   docs:
     runs-on: ubuntu-latest

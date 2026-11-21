@@ -6,7 +6,7 @@
 Upgrading to 2.0
 ================
 
-* Python 3.14 or newer is required.
+* The package requires Python 3.8 or newer and is tested on Python 3.8 through 3.14. The Docker image is built on Python 3.14 (see below).
 * The Docker image is now published only to the GitHub Container Registry as ``ghcr.io/jantman/ecsjobs`` (tags ``<version>`` and ``latest``); the ``jantman/ecsjobs`` image on Docker Hub is no longer updated. The image is built on current Alpine and Python 3.14 (previously 3.9), which matters for any Python scripts your jobs run inside it.
 * The AWS CLI in the Docker image is now version 2 (Alpine's ``aws-cli`` package) instead of version 1. Check job scripts for commands that changed between the two, such as the removed ``aws ecr get-login`` and the new default output pager and binary format.
 * The Docker image's ``git_commit``, ``git_url``, ``build_time`` and ``maintainer`` labels are replaced by standard ``org.opencontainers.image.*`` labels.

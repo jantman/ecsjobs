@@ -41,6 +41,7 @@ from freezegun import freeze_time
 import pytest
 
 from ecsjobs.config import Config
+from ecsjobs.tests import mock_open_exit_calls
 
 pbm = 'ecsjobs.config'
 pb = '%s.Config' % pbm
@@ -186,10 +187,8 @@ class TestLoadYamlFromDisk(ConfigTester):
             call('/foo/bar.yml', 'r'),
             call().__enter__(),
             call().read(4096),
-            call().read(4096),
-            call().__exit__(None, None, None),
-            call().close()
-        ]
+            call().read(4096)
+        ] + mock_open_exit_calls()
 
 
 class TestLoadConfigS3(ConfigTester):
