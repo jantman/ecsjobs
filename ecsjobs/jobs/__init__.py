@@ -68,4 +68,6 @@ def schema_for_job_class(cls):
     )))
     s['properties']['class_name'] = {'enum': [cls.__name__]}
     s['title'] = 'Configuration for %s class instance' % cls.__name__
+    # properties are merged flat (no allOf/$ref), so this sees every key
+    s['additionalProperties'] = False
     return s

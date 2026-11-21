@@ -4,11 +4,11 @@ Running
 Locally via Docker
 ------------------
 
-To pull the Docker image
+The Docker image is published to the GitHub Container Registry as ``ghcr.io/jantman/ecsjobs``, tagged with each release version and ``latest``. To pull it:
 
 .. code-block:: bash
 
-    docker pull jantman/ecsjobs:latest
+    docker pull ghcr.io/jantman/ecsjobs:latest
 
 To run locally via Docker to validate a configuration directory ``./conf``:
 
@@ -17,7 +17,7 @@ To run locally via Docker to validate a configuration directory ``./conf``:
     docker run -it --rm \
       -e ECSJOBS_LOCAL_CONF_PATH=/tmp/conf \
       -v $(pwd)/conf:/tmp/conf \
-      jantman/ecsjobs:latest \
+      ghcr.io/jantman/ecsjobs:latest \
       validate
 
 To run the "foo" schedule locally in a detached/background container (i.e. as a cron job) and allow it to run Docker execs, assuming your Docker socket is at ``/var/run/docker.sock``, your configuration directory is at ``./conf``, and you want to use AWS credentials from ``~/.aws/credentials``:
@@ -30,21 +30,21 @@ To run the "foo" schedule locally in a detached/background container (i.e. as a 
       -v $(pwd)/conf:/tmp/conf \
       -v /var/run/docker.sock:/tmp/docker.sock \
       -v $(readlink -f ~/.aws/credentials):/root/.aws/credentials \
-      jantman/ecsjobs:latest \
+      ghcr.io/jantman/ecsjobs:latest \
       run foo
 
 Note that when running in this method, the ``LocalCommand`` class runs commands inside the ecsjobs Docker container, not on the host system.
 
-Locally via pip
----------------
+Locally via PyPI
+----------------
 
-To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, first setup a virtualenv and install ecsjobs:
+To run locally directly on the host OS, i.e. so the ``LocalCommand`` class will run commands on the host, install the ``ecsjobs`` package from PyPI (Python 3.14 or newer is required) into a virtualenv, for example with `uv <https://docs.astral.sh/uv/>`_:
 
 .. code-block:: bash
 
-    virtualenv --python=python3.6 .
-    source bin/activate
-    pip install ecsjobs
+    uv venv
+    source .venv/bin/activate
+    uv pip install ecsjobs
 
 To run the "foo" schedule locally using a configuration directory at ``./conf``:
 
@@ -127,7 +127,7 @@ The container definition that I use in my Task Definition for ecsjobs is as foll
     [
       {
         "name": "ecsjobs",
-        "image": "jantman/ecsjobs:latest",
+        "image": "ghcr.io/jantman/ecsjobs:latest",
         "command": ["run", "${var.schedule}"],
         "cpu": 64,
         "memoryReservation": 64,

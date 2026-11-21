@@ -202,7 +202,7 @@ class Config(object):
         :rtype: dict
         """
         with open(path, 'r') as fh:
-            return yaml.load(fh, Loader=yaml.FullLoader)
+            return yaml.safe_load(fh)
 
     def _key_is_yaml(self, key):
         """
@@ -262,7 +262,7 @@ class Config(object):
                          exc_info=True)
             raise RuntimeError(
                 'ERROR: Unable to retrieve key %s from bucket %s' % (
-                    bucket.name, key
+                    key, bucket.name
                 )
             )
         try:
@@ -272,17 +272,17 @@ class Config(object):
                          exc_info=True)
             raise RuntimeError(
                 'ERROR: Unable to read key %s from bucket %s' % (
-                    bucket.name, key
+                    key, bucket.name
                 )
             )
         try:
-            res = yaml.load(body, Loader=yaml.FullLoader)
+            res = yaml.safe_load(body)
         except Exception:
             logger.error('Unable to load YAML from s3://%s/%s', bucket.name,
                          key, exc_info=True)
             raise RuntimeError(
                 'ERROR: Unable to load YAML from key %s from bucket %s' % (
-                    bucket.name, key
+                    key, bucket.name
                 )
             )
         return res

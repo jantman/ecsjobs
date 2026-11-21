@@ -39,7 +39,6 @@ from unittest.mock import patch, call, Mock, DEFAULT, mock_open
 from freezegun import freeze_time
 
 import pytest
-import yaml
 
 from ecsjobs.config import Config
 
@@ -49,7 +48,7 @@ pb = '%s.Config' % pbm
 
 class ConfigTester(object):
 
-    def setup(self):
+    def setup_method(self):
         with patch('%s.logger' % pbm, autospec=True) as self.mock_logger:
             with patch(
                 '%s.boto3.resource' % pbm, autospec=True
@@ -188,7 +187,8 @@ class TestLoadYamlFromDisk(ConfigTester):
             call().__enter__(),
             call().read(4096),
             call().read(4096),
-            call().__exit__(None, None, None)
+            call().__exit__(None, None, None),
+            call().close()
         ]
 
 
@@ -447,7 +447,7 @@ class TestGetYamlFromS3(ConfigTester):
         m_obj.get.return_value = {'Body': m_body}
         m_bkt = Mock()
         m_bkt.Object.return_value = m_obj
-        with patch('%s.yaml.load' % pbm) as m_load:
+        with patch('%s.yaml.safe_load' % pbm) as m_load:
             m_load.return_value = expected
             res = self.cls._get_yaml_from_s3(m_bkt, 'foo/bar/baz.yml')
         assert res == expected
@@ -457,7 +457,7 @@ class TestGetYamlFromS3(ConfigTester):
         ]
         assert m_obj.mock_calls == [call.get()]
         assert m_body.mock_calls == [call.read()]
-        assert m_load.mock_calls == [call(content, Loader=yaml.FullLoader)]
+        assert m_load.mock_calls == [call(content)]
 
     def test_no_object(self):
         content = "foo: bar\nbaz: 123\n"
@@ -466,14 +466,16 @@ class TestGetYamlFromS3(ConfigTester):
         m_body.read.return_value = content
         m_obj = Mock(key='foo/bar/baz.yml')
         m_obj.get.return_value = {'Body': m_body}
-        m_bkt = Mock(name='bname')
+        m_bkt = Mock()
+        m_bkt.name = 'bname'
         m_bkt.Object.side_effect = NotImplementedError('foo')
-        with patch('%s.yaml.load' % pbm) as m_load:
+        with patch('%s.yaml.safe_load' % pbm) as m_load:
             m_load.return_value = expected
             with pytest.raises(RuntimeError) as exc:
                 self.cls._get_yaml_from_s3(m_bkt, 'foo/bar/baz.yml')
-                assert str(exc.value) == 'ERROR: Unable to retrieve key ' \
-                                         'foo/bar/baz.yml from bucket bname'
+        assert str(exc.value) == (
+            'ERROR: Unable to retrieve key foo/bar/baz.yml from bucket bname'
+        )
         assert m_bkt.mock_calls == [
             call.Object('foo/bar/baz.yml')
         ]
@@ -488,14 +490,16 @@ class TestGetYamlFromS3(ConfigTester):
         m_body.read.return_value = content
         m_obj = Mock(key='foo/bar/baz.yml')
         m_obj.get.side_effect = NotImplementedError('foo')
-        m_bkt = Mock(name='bname')
+        m_bkt = Mock()
+        m_bkt.name = 'bname'
         m_bkt.Object.return_value = m_obj
-        with patch('%s.yaml.load' % pbm) as m_load:
+        with patch('%s.yaml.safe_load' % pbm) as m_load:
             m_load.return_value = expected
             with pytest.raises(RuntimeError) as exc:
                 self.cls._get_yaml_from_s3(m_bkt, 'foo/bar/baz.yml')
-                assert str(exc.value) == 'ERROR: Unable to read key ' \
-                                         'foo/bar/baz.yml from bucket bname'
+        assert str(exc.value) == (
+            'ERROR: Unable to read key foo/bar/baz.yml from bucket bname'
+        )
         assert m_bkt.mock_calls == [
             call.Object('foo/bar/baz.yml'),
             call.Object().get()
@@ -510,21 +514,24 @@ class TestGetYamlFromS3(ConfigTester):
         m_body.read.return_value = content
         m_obj = Mock(key='foo/bar/baz.yml')
         m_obj.get.return_value = {'Body': m_body}
-        m_bkt = Mock(name='bname')
+        m_bkt = Mock()
+        m_bkt.name = 'bname'
         m_bkt.Object.return_value = m_obj
-        with patch('%s.yaml.load' % pbm) as m_load:
+        with patch('%s.yaml.safe_load' % pbm) as m_load:
             m_load.side_effect = NotImplementedError('foo')
             with pytest.raises(RuntimeError) as exc:
                 self.cls._get_yaml_from_s3(m_bkt, 'foo/bar/baz.yml')
-                assert str(exc.value) == 'ERROR: Unable to load YAML from ' \
-                                         'key foo/bar/baz.yml from bucket bname'
+        assert str(exc.value) == (
+            'ERROR: Unable to load YAML from key foo/bar/baz.yml from '
+            'bucket bname'
+        )
         assert m_bkt.mock_calls == [
             call.Object('foo/bar/baz.yml'),
             call.Object().get()
         ]
         assert m_obj.mock_calls == [call.get()]
         assert m_body.mock_calls == [call.read()]
-        assert m_load.mock_calls == [call(content, Loader=yaml.FullLoader)]
+        assert m_load.mock_calls == [call(content)]
 
 
 class TestScheduleNames(ConfigTester):

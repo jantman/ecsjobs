@@ -45,8 +45,8 @@ from ecsjobs.jobs import get_job_classes, schema_for_job_class
 class Schema(object):
 
     base_schema = {
-        '$schema': 'http://json-schema.org/schema#',
-        'id': 'http://schemas.jasonantman.com/github/ecsjobs/config.json',
+        '$schema': 'https://json-schema.org/draft/2020-12/schema',
+        '$id': 'http://schemas.jasonantman.com/github/ecsjobs/config.json',
         'title': 'ECSJobs configuration schema',
         'description': 'Overall ecsjobs (Python package) configuration',
         'definitions': {},
@@ -56,7 +56,6 @@ class Schema(object):
         'properties': {
             'jobs': {
                 'type': 'array',
-                'additionalItems': False,
                 'items': {'anyOf': []},
                 'title': 'Array of Jobs to run',
                 'description': 'Array of items that construct Job subclass '
@@ -65,7 +64,7 @@ class Schema(object):
             'global': {
                 'type': 'object',
                 'title': 'Global configuration for application',
-                'additionalItems': False,
+                'additionalProperties': False,
                 'required': ['from_email', 'to_email'],
                 'properties': {
                     'from_email': {
@@ -91,7 +90,10 @@ class Schema(object):
                     'max_total_runtime_sec': {'type': 'integer'},
                     'email_subject': {'type': 'string'},
                     'failure_html_path': {'type': 'string'},
-                    'failure_command': {'type': 'array'}
+                    'failure_command': {
+                        'type': 'array',
+                        'items': {'type': 'string'}
+                    }
                 }
             }
         }

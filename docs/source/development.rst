@@ -10,55 +10,43 @@ Any and all contributions are welcome.
 Installing for Development
 --------------------------
 
-To setup ecsjobs for development:
+ecsjobs requires Python 3.14 or newer and uses `uv <https://docs.astral.sh/uv/>`_ to manage its environment.
 
 1. Fork the `ecsjobs <https://github.com/jantman/ecsjobs>`_ repository on GitHub and clone it locally; ``cd ecsjobs``.
 
-2. Create a ``virtualenv`` to run the code in and install it:
+2. Install the package and all dependency groups into ``.venv/``:
 
 .. code-block:: bash
 
-    $ virtualenv venv
-    $ source venv/bin/activate
-    $ python setup.py develop
+    uv sync --locked --all-groups
 
 3. Check out a new git branch. If you're working on a GitHub issue you opened, your
    branch should be called "issues/N" where N is the issue number.
 
-.. _development.release_checklist:
+.. _development.testing:
 
-Release Checklist
------------------
+Tests, Lint and Docs
+--------------------
 
-1. Ensure that Travis tests are passing in all environments.
-2. Ensure that test coverage is no less than the last release (ideally, 100%).
-3. Build docs for the branch (locally) and ensure they look correct (``tox -e docs``). Commit any changes.
-4. Increment the version number in ecsjobs/version.py and add version and release date to CHANGES.rst. ``export ECSJOBS_VER=x.y.z``. Ensure that there are CHANGES.rst entries for all major changes since the last release, and that any new required IAM permissions are explicitly mentioned. Commit changes and push to GitHub. Wait for builds to pass.
-5. Confirm that README.rst renders correctly on GitHub.
-6. Upload package to testpypi, confirm that README.rst renders correctly.
+All of these are run in CI by ``.github/workflows/tests.yml``.
 
-   * Make sure your ~/.pypirc file is correct (a repo called ``test`` for https://testpypi.python.org/pypi).
-   * ``rm -Rf dist``
-   * ``python setup.py sdist bdist_wheel``
-   * ``twine upload -r test dist/*``
-   * Check that the README renders at https://testpypi.python.org/pypi/ecsjobs
+* Lint: ``uv run ruff check``
+* Tests: ``uv run pytest``. Test coverage must stay at 100% (this is enforced). To run a single test, use ``uv run pytest ecsjobs/tests/test_config.py::TestClass::test_name``.
+* Docs: ``uv run sphinx-build -a -n -W -b html docs/source docs/build/html``. Warnings are treated as errors. The package must be installed (as above), as the docs read the version from its metadata.
+* Docker image smoke test: ``docker build -t ecsjobs:dev .`` and then ``dev/docker_smoke_test.sh ecsjobs:dev``. This runs the image end-to-end in a container against a mocked AWS (moto).
 
-7. Tag the release in Git, push tag to GitHub:
+Documentation for behavior changes must be updated in ``docs/source`` along with the code.
 
-   * tag the release with a signed tag: ``git tag -s -a $ECSJOBS_VER -m "$ECSJOBS_VER released $(date +%Y-%m-%d)"``
-   * Verify the signature on the tag, just to be sure: ``git tag -v $ECSJOBS_VER``
-   * push the tag to GitHub: ``git push origin $ECSJOBS_VER``
+.. _development.releasing:
 
-8. Upload package to live pypi:
+Releasing
+---------
 
-    * ``twine upload dist/*``
+The version number lives only in ``pyproject.toml``. To release:
 
-9. Run ``./build_docker.sh`` to build the Docker image. Take note of the generated (timestamp) tag and ``export TIMESTAMP=<generated timestamp tag>``.
-10. Re-tag the generated Docker image with the version and "latest" and then push to Docker Hub:
+1. Increment ``version`` in ``pyproject.toml`` and run ``uv lock``.
+2. Merge the change to ``master``.
 
-   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:$ECSJOBS_VER``
-   * ``docker push jantman/ecsjobs:$ECSJOBS_VER``
-   * ``docker tag jantman/ecsjobs:$TIMESTAMP jantman/ecsjobs:latest``
-   * ``docker push jantman/ecsjobs:latest``
+When a push to ``master`` has a version greater than the latest GitHub release, ``.github/workflows/release.yml`` runs the tests, publishes the package to PyPI (using PyPI trusted publishing), pushes the Docker image to ``ghcr.io/jantman/ecsjobs`` as ``<version>`` and ``latest``, and creates the Git tag (the bare version, e.g. ``2.0.0``) and a GitHub release with automatically generated release notes. Do not create tags manually. There is no changelog file; release notes are the `GitHub releases <https://github.com/jantman/ecsjobs/releases>`_.
 
-11. On GitHub, create a release for the tag. Run ``pandoc -f rst -t markdown_github CHANGES.rst`` to convert CHANGES.rst to Markdown, and use the appropriate section for the GitHub release description.
+The documentation is built and deployed to GitHub Pages at https://jantman.github.io/ecsjobs/ by ``.github/workflows/docs.yml`` on every push to ``master``.

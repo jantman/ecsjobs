@@ -69,3 +69,7 @@ man/
 results/
 .pytest_cache
 pyvenv.cfg
+
+# uv / ruff
+.venv/
+.ruff_cache/

@@ -1,0 +1,70 @@
+name: Claude Code
+
+# Reactive: does nothing until someone writes @claude. Pairs with claude-pr-review.yml.
+#
+# >>> DO NOT MERGE THESE TWO INTO ONE JOB. <<<
+# They look redundant and are not. The shared action for THIS file supplies no `prompt`,
+# which is what keeps claude-code-action in TAG mode. Supplying one -- as the review
+# action does -- puts it in AGENT mode for every event it sees, where an @claude comment
+# gets no PR context, no tracking comment, and nothing posted back.
+#
+# NOTE: `issue_comment` workflows always run from the default branch, so edits to this
+# file do nothing until they are merged.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    # >>> THIS GUARD IS LOAD-BEARING ON A PUBLIC REPOSITORY. <<<
+    # Two conditions, both required, both checked per-event.
+    #
+    # 1. author_association of the person who ACTUALLY TRIGGERED IT. This job has
+    #    `contents: write` and blanket `Bash`, so without this check any passer-by who
+    #    types @claude gets an arbitrary-code-execution agent run on the maintainer's
+    #    OAuth token. The pairing matters: on `issue_comment`,
+    #    `github.event.issue.author_association` is the issue's *opener*, not the
+    #    commenter, so checking that field here would let a stranger trigger a run
+    #    merely by commenting on a maintainer's own issue. OWNER covers the repository
+    #    owner; COLLABORATOR/MEMBER cover anyone later given push access.
+    # 2. the @claude mention itself.
+    #
+    # The guard cannot live in the shared action: by the time a composite action runs,
+    # the runner is already up and the token already minted.
+    if: |
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, '@claude') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' &&
+       contains(github.event.comment.body, '@claude') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' &&
+       contains(github.event.review.body, '@claude') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' &&
+       (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # Required for Claude to read CI results on PRs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: jantman/github-actions-workflows/claude-mention@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

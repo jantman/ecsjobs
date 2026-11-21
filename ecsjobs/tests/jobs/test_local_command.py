@@ -83,7 +83,7 @@ class TestLocalCommand(object):
 
 class TestLocalCommandRun(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = LocalCommand(
             'jname',
             'sname',
@@ -339,7 +339,7 @@ class TestLocalCommandRun(object):
 
 class TestLocalCommandReportDescription(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = LocalCommand(
             'jname',
             'sname',
@@ -356,7 +356,7 @@ class TestLocalCommandReportDescription(object):
 
 class TestLocalCommandGetScript(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = LocalCommand(
             'jname',
             'sname',

@@ -66,9 +66,7 @@ class LocalCommand(Job):
                     {'type': 'string'},
                     {
                         'type': 'array',
-                        'items': [
-                            {'type': 'string'}
-                        ]
+                        'items': {'type': 'string'}
                     }
                 ]
             },

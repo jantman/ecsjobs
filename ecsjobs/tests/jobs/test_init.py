@@ -110,7 +110,8 @@ class TestSchemaForJobs(object):
                 'class_name',
                 'name',
                 'schedule'
-            ]
+            ],
+            'additionalProperties': False
         }
 
     def test_two(self):
@@ -136,5 +137,6 @@ class TestSchemaForJobs(object):
                 'name',
                 'propBar',
                 'schedule'
-            ]
+            ],
+            'additionalProperties': False
         }

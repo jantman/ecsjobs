@@ -48,7 +48,7 @@ pb = '%s.DockerExecMixin' % pbm
 
 class TestDockerExecMixin(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = DockerExecMixin()
         self.m_docker = MagicMock()
         self.m_container = Mock()

@@ -1,0 +1,13 @@
+# Allowlist: the build context is only what the wheel build needs.
+# Everything else (.git, venvs, build/dist, docs, caches, IDE files, ...)
+# stays out by default.
+*
+!pyproject.toml
+!uv.lock
+!README.rst
+!LICENSE
+!ecsjobs/
+
+# never ship caches/bytecode from inside the package dir
+**/__pycache__
+**/*.py[cod]

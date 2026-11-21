@@ -124,7 +124,7 @@ class TestValidateExamples(object):
           schedule: foo
           command: uptime
         """)
-        conf = yaml.load(config_yaml, Loader=yaml.FullLoader)
+        conf = yaml.safe_load(config_yaml)
         Schema().validate(conf)
 
     def test_local_command_missing_schedule(self):
@@ -142,7 +142,7 @@ class TestValidateExamples(object):
           class_name: LocalCommand
           schedule: foo
         """)
-        conf = yaml.load(config_yaml, Loader=yaml.FullLoader)
+        conf = yaml.safe_load(config_yaml)
         with pytest.raises(ValidationError) as exc:
             Schema().validate(conf)
         assert list(exc.value.relative_path) == ['jobs', 0]
@@ -151,3 +151,154 @@ class TestValidateExamples(object):
         assert list(exc.value.relative_schema_path) == [
             'properties', 'jobs', 'items', 'anyOf'
         ]
+
+
+class TestCommandArrayItems(object):
+    """The ``command`` array must contain only strings (every element)."""
+
+    @staticmethod
+    def _conf(class_name, command):
+        job = {
+            'name': 'jobOne',
+            'class_name': class_name,
+            'schedule': 'foo',
+            'command': command
+        }
+        if class_name == 'DockerExec':
+            job['container_name'] = 'myCont'
+        if class_name == 'EcsDockerExec':
+            job['container_name'] = 'myCont'
+        return {
+            'global': {
+                'from_email': 'you@example.com',
+                'to_email': ['target@example.com']
+            },
+            'jobs': [job]
+        }
+
+    @pytest.mark.parametrize(
+        'class_name', ['LocalCommand', 'DockerExec', 'EcsDockerExec']
+    )
+    def test_all_string_array_accepted(self, class_name):
+        Schema().validate(self._conf(class_name, ['ls', '-l', '/tmp']))
+
+    @pytest.mark.parametrize(
+        'class_name', ['LocalCommand', 'DockerExec', 'EcsDockerExec']
+    )
+    @pytest.mark.parametrize(
+        'command', [['ls', 1], ['ls', '-l', None], ['ls', ['a']]]
+    )
+    def test_non_string_array_element_rejected(self, class_name, command):
+        with pytest.raises(ValidationError):
+            Schema().validate(self._conf(class_name, command))
+
+
+GLOBAL_CONF = {
+    'from_email': 'you@example.com',
+    'to_email': ['target@example.com']
+}
+
+# every documented property of each job class, with representative values
+FULL_JOBS = {
+    'LocalCommand': {
+        'command': ['/bin/echo', 'foo'],
+        'shell': False,
+        'timeout': 30,
+        'script_source': 'https://example.com/script.sh'
+    },
+    'DockerExec': {
+        'container_name': 'myCont',
+        'command': ['ls', '-l'],
+        'tty': False,
+        'stdout': True,
+        'stderr': True,
+        'privileged': False,
+        'user': 'root',
+        'environment': {'FOO': 'bar'}
+    },
+    'EcsDockerExec': {
+        'task_definition_family': 'myFamily',
+        'container_name': 'myCont',
+        'command': 'ls -l',
+        'tty': False,
+        'stdout': True,
+        'stderr': True,
+        'privileged': False,
+        'user': 'root',
+        'environment': ['FOO=bar']
+    },
+    'EcsTask': {
+        'cluster_name': 'myCluster',
+        'task_definition_family': 'myFamily',
+        'overrides': {'containerOverrides': []},
+        'network_configuration': {'awsvpcConfiguration': {}}
+    },
+}
+
+
+class TestStrictKeys(object):
+    """Unknown keys are errors in the global section and in every job."""
+
+    @staticmethod
+    def _job(class_name):
+        job = {
+            'name': 'jobOne',
+            'class_name': class_name,
+            'schedule': 'foo',
+            'summary_regex': 'x(.*)',
+            'cron_expression': '0 * * * *'
+        }
+        job.update(FULL_JOBS[class_name])
+        return job
+
+    @pytest.mark.parametrize('class_name', sorted(FULL_JOBS))
+    def test_all_documented_properties_valid(self, class_name):
+        conf = {
+            'global': dict(
+                GLOBAL_CONF,
+                inter_poll_sleep_sec=5,
+                max_total_runtime_sec=600,
+                email_subject='Subj',
+                failure_html_path='/tmp/fail-{date}.html',
+                failure_command=['/bin/cat', '-n']
+            ),
+            'jobs': [self._job(class_name)]
+        }
+        Schema().validate(conf)
+
+    @pytest.mark.parametrize('class_name', sorted(FULL_JOBS))
+    def test_unknown_job_key_rejected(self, class_name):
+        job = self._job(class_name)
+        job['shel'] = True
+        with pytest.raises(ValidationError):
+            Schema().validate({'global': GLOBAL_CONF, 'jobs': [job]})
+
+    def test_misspelled_local_command_key_rejected(self):
+        job = {
+            'name': 'jobOne',
+            'class_name': 'LocalCommand',
+            'schedule': 'foo',
+            'command': 'uptime',
+            'shel': True
+        }
+        with pytest.raises(ValidationError):
+            Schema().validate({'global': GLOBAL_CONF, 'jobs': [job]})
+
+    def test_unknown_global_key_rejected(self):
+        conf = {
+            'global': dict(GLOBAL_CONF),
+            'jobs': []
+        }
+        conf['global']['bogus_key'] = 1
+        with pytest.raises(ValidationError) as exc:
+            Schema().validate(conf)
+        assert exc.value.validator == 'additionalProperties'
+        assert list(exc.value.relative_path) == ['global']
+
+    def test_failure_command_requires_strings(self):
+        conf = {
+            'global': dict(GLOBAL_CONF, failure_command=['/bin/cat', 1]),
+            'jobs': []
+        }
+        with pytest.raises(ValidationError):
+            Schema().validate(conf)

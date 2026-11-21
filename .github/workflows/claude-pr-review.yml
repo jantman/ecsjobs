@@ -1,0 +1,48 @@
+name: Claude PR Review
+
+# Proactive: reviews every PR without being asked. Pairs with claude-mention.yml, the
+# reactive half. Both are thin: the logic lives in
+# jantman/github-actions-workflows/claude-pr-review.
+#
+# >>> A CHANGE TO *THIS FILE* CANNOT BE TESTED BY THE PR THAT MAKES IT. <<<
+# claude-code-action refuses to run when this file differs from the copy on the default
+# branch -- that is what stops a pull request from rewriting it to steal the OAuth
+# token. It exits 0 when it skips, so such a PR goes green having reviewed nothing.
+# Look for "Exiting due to workflow validation skip". Merge first, then the next PR
+# gets a real review. A change to the shared ACTION has no such problem, because this
+# file does not change.
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+# A new push supersedes the review it interrupted. Reviewing a commit that has already
+# been replaced burns a full agent run on code that no longer exists.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    # A pull request from a fork gets no secrets, so CLAUDE_CODE_OAUTH_TOKEN is empty
+    # and the action fails red rather than skipping -- a confusing failure on somebody
+    # else's contribution. Skip cleanly instead. Always true on a repository that takes
+    # no fork pull requests.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # POST /pulls/N/reviews, and the agent reads the PR
+      issues: write # the action's own tracking/error comments, not the review
+      id-token: write
+      actions: read # lets the reviewer read this commit's CI results
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: jantman/github-actions-workflows/claude-pr-review@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

@@ -35,5 +35,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 ##################################################################################
 """
 
-VERSION = '1.1.1'
+from importlib.metadata import version as _pkg_version
+
+VERSION = _pkg_version('ecsjobs')
 PROJECT_URL = 'https://github.com/jantman/ecsjobs'

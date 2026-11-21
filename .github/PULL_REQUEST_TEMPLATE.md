@@ -4,11 +4,11 @@ __IMPORTANT:__ Please take note of the below checklist, especially the first two
 
 - [ ] All pull requests must include the Contributor License Agreement (see below).
 - [ ] Code should conform to the following:
-    - [ ] pep8 compliant with some exceptions (see pytest.ini)
-    - [ ] 100% test coverage with pytest (with valid tests). If you have difficulty
+    - [ ] passes ``uv run ruff check``
+    - [ ] 100% test coverage with ``uv run pytest`` (with valid tests). If you have difficulty
       writing tests for the code, feel free to ask for help or submit the PR without tests.
     - [ ] Complete, correctly-formatted documentation for all classes, functions and methods.
-    - [ ] documentation has been rebuilt with ``tox -e docs``
+    - [ ] documentation has been rebuilt with ``uv run sphinx-build -a -n -W -b html docs/source docs/build/html``
     - [ ] All modules should have (and use) module-level loggers.
     - [ ] **Commit messages** should be meaningful, and reference the Issue number
       if you're working on a GitHub issue (i.e. "issue #x - <message>"). Please

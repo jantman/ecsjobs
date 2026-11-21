@@ -76,9 +76,7 @@ class EcsDockerExec(Job, DockerExecMixin):
                     {'type': 'string'},
                     {
                         'type': 'array',
-                        'items': [
-                            {'type': 'string'}
-                        ]
+                        'items': {'type': 'string'}
                     }
                 ]
             },

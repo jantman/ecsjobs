@@ -101,7 +101,7 @@ class TestEcsTaskInit(object):
 
 class TestEcsTask(object):
 
-    def setup(self):
+    def setup_method(self):
         self.mock_ecs = Mock()
         self.mock_cw = Mock()
         self.cls = EcsTask(

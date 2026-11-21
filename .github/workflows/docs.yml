@@ -1,0 +1,60 @@
+name: docs
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel a Pages deployment part-way; queue the next one instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Exact pin: setup-uv publishes no floating major tags after v7.
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Build docs
+        run: uv run sphinx-build -a -n -W -b html docs/source docs/build/html
+
+      # Sphinx output has _static/ etc., which Jekyll would drop. The pickled
+      # doctrees land in the output dir by default and need not be published.
+      - name: Touch .nojekyll
+        run: |
+          touch docs/build/html/.nojekyll
+          rm -rf docs/build/html/.doctrees
+
+      # upload-pages-artifact excludes dotfiles (so .nojekyll) by default.
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/build/html
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
