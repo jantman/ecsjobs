@@ -1,12 +1,17 @@
 ecsjobs
 =======
 
-.. image:: http://www.repostatus.org/badges/latest/active.svg
+.. image:: https://www.repostatus.org/badges/latest/active.svg
    :alt: Project Status: Active – The project has reached a stable, usable state and is being actively developed.
-   :target: http://www.repostatus.org/#active
+   :target: https://www.repostatus.org/#active
 
-* Documentation: `http://ecsjobs.readthedocs.io/en/latest/ <http://ecsjobs.readthedocs.io/en/latest/>`_
-* Builds: `https://app.travis-ci.com/github/jantman/ecsjobs <https://app.travis-ci.com/github/jantman/ecsjobs>`_
+.. image:: https://github.com/jantman/ecsjobs/actions/workflows/tests.yml/badge.svg
+   :alt: Tests status
+   :target: https://github.com/jantman/ecsjobs/actions/workflows/tests.yml
+
+* Documentation: `https://jantman.github.io/ecsjobs/ <https://jantman.github.io/ecsjobs/>`_
+* Package: `ecsjobs on PyPI <https://pypi.org/project/ecsjobs/>`_
+* Docker image: ``ghcr.io/jantman/ecsjobs`` on the GitHub Container Registry
 
 A scheduled job wrapper for ECS, focused on email reporting and adding docker exec and local command abilities.
 

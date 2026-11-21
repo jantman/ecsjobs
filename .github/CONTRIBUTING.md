@@ -1,4 +1,4 @@
 Contributing to ecsjobs
 ===============================
 
-See the [Documentation on ReadTheDocs](http://ecsjobs.readthedocs.org/en/master/index.html) for information on how to contribute.
+See the [Development documentation](https://jantman.github.io/ecsjobs/development.html) for information on how to contribute.

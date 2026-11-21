@@ -299,7 +299,7 @@ class TestMain(object):
 
 class TestEcsJobsRunner(object):
 
-    def setup(self):
+    def setup_method(self):
         self.config = Mock()
         self.cls = EcsJobsRunner(self.config)
 

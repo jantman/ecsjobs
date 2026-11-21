@@ -47,7 +47,7 @@ pb = '%s.Job' % pbm
 
 class TestBaseJob(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = Job('jname', 'schedname')
 
     def test_init(self):
@@ -198,7 +198,7 @@ class TestBaseJob(object):
 
 class TestBaseJobSummary(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = Job('jname', 'schedname')
 
     def test_summary_one_line(self):

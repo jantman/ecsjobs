@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ecsjobs"
+version = "1.1.1"
+description = "A scheduled job wrapper for ECS, focused on email reporting and adding docker exec and local command abilities."
+readme = "README.rst"
+requires-python = ">=3.14"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Jason Antman", email = "jason@jasonantman.com" }]
+keywords = ["aws", "ecs", "cron", "email", "docker"]
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "boto3>=1.44,<2.0.0",
+    "cronex>=0.1.3",
+    "docker>=7.0",
+    "jsonschema>=4.26,<5.0.0",
+    "PyYAML>=6.0",
+    "requests>=2.32,<3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jantman/ecsjobs"
+Documentation = "https://jantman.github.io/ecsjobs/"
+Source = "https://github.com/jantman/ecsjobs"
+Issues = "https://github.com/jantman/ecsjobs/issues"
+
+[project.scripts]
+ecsjobs = "ecsjobs.runner:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "freezegun",
+    "ruff",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ecsjobs"]
+exclude = ["ecsjobs/tests"]
+
+[tool.hatch.build.targets.sdist]
+include = ["ecsjobs", "docs/source", "README.rst", "LICENSE", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["ecsjobs"]
+addopts = "-rxs --durations=10 --cov=ecsjobs --cov-report=term-missing --cov-report=xml"
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.coverage.run]
+branch = true
+omit = ["ecsjobs/tests/*"]
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+    # this cant ever be run by py.test, but it just calls one function,
+    # so ignore it
+    "if __name__ == .__main__.:",
+    "if sys.version_info.+",
+    "raise NotImplementedError",
+    "except ImportError:",
+    ".*# nocoverage.*",
+]
+
+[tool.ruff]
+line-length = 80
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"ecsjobs/jobs/__init__.py" = ["F401"]

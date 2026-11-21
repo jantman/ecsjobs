@@ -104,7 +104,7 @@ class TestDockerExecInit(object):
 
 class TestDockerExec(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = DockerExec(
             'jname', 'sname',
             container_name='contname',

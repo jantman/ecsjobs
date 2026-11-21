@@ -115,7 +115,7 @@ class TestDockerExecInit(object):
 
 class TestDockerExec(object):
 
-    def setup(self):
+    def setup_method(self):
         self.cls = EcsDockerExec(
             'jname', 'sname',
             task_definition_family='famname',

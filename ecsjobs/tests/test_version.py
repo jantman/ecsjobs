@@ -38,6 +38,7 @@ Jason Antman <jason@jasonantman.com> <http://www.jasonantman.com>
 import ecsjobs.version as version
 
 import re
+from importlib.metadata import version as pkg_version
 
 
 class TestVersion(object):
@@ -45,6 +46,9 @@ class TestVersion(object):
     def test_project_url(self):
         expected = 'https://github.com/jantman/ecsjobs'
         assert version.PROJECT_URL == expected
+
+    def test_version_from_metadata(self):
+        assert version.VERSION == pkg_version('ecsjobs')
 
     def test_is_semver(self):
         # see:

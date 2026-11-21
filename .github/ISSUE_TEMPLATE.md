@@ -31,12 +31,12 @@ ecsjobs version, as reported by ``ecsjobs --version``
 
 ### Installation Method
 
-How was ecsjobs installed (provide as much detail as possible, ideally
-the exact command used and whether it was installed in a virtualenv or not).
+How was ecsjobs installed or run (PyPI package or the ``ghcr.io/jantman/ecsjobs`` Docker image; provide as much detail as possible, ideally
+the exact command used).
 
 ### Supporting Software Versions
 
-The output of ``python --version`` and ``virtualenv --version`` in the environment
+The output of ``python --version`` (or the Docker image tag) in the environment
 that ecsjobs is running in, as well as your operating system type and version.
 
 ### Actual Output

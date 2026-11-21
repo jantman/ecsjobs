@@ -100,10 +100,10 @@ class EcsTask(Job):
           RunTask API call, as specified in the documentation for
           :py:meth:`ECS.Client.run_task`
         :type overrides: dict
-        :param networkConfiguration: RunTask networkConfiguration parameter to
+        :param network_configuration: RunTask networkConfiguration parameter to
           pass to ECS API call, as specified in the documentation for
           :py:meth:`ECS.Client.run_task`
-        :type networkConfiguration: dict
+        :type network_configuration: dict
         """
         super(EcsTask, self).__init__(
             name, schedule, summary_regex=summary_regex,

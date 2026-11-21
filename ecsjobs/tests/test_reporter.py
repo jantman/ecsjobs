@@ -51,7 +51,7 @@ pb = '%s.Reporter' % pbm
 
 class ReportTester(object):
 
-    def setup(self):
+    def setup_method(self):
         self.client = Mock()
         self.mock_conf = Mock()
         self.from_email = 'from@example.com'
@@ -277,7 +277,8 @@ class TestRun(ReportTester):
             call('/tmp/path', 'w'),
             call().__enter__(),
             call().write('my_html_report'),
-            call().__exit__(None, None, None)
+            call().__exit__(None, None, None),
+            call().close()
         ]
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
@@ -343,19 +344,39 @@ class TestRun(ReportTester):
             call('/tmp/path', 'w'),
             call().__enter__(),
             call().write('my_html_report'),
-            call().__exit__(None, None, None)
+            call().__exit__(None, None, None),
+            call().close()
         ]
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
         ]
         assert mocks['Popen'].mock_calls == [
             call(
-                '/bin/something', 'foo', stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-                universal_newlines=True
+                ['/bin/something', 'foo'], stdin=PIPE, stdout=PIPE,
+                stderr=STDOUT, universal_newlines=True
             ),
             call().communicate(input='\n\nmy_html_report', timeout=120)
         ]
         assert mocks['os_close'].mock_calls == [call(999)]
+
+    def test_run_exception_failure_cmd_real_process(self, tmp_path):
+        out_file = tmp_path / 'stdin.txt'
+        self.client.send_email.side_effect = RuntimeError('foo')
+        self.failure_command = [
+            '/bin/sh', '-c', 'cat > "$0"', str(out_file)
+        ]
+        with patch('%s._make_report' % pb) as mock_mr:
+            mock_mr.return_value = 'my_html_report'
+            with patch('%s.open' % pbm, mock_open(), create=True):
+                with patch.multiple(
+                    pbm,
+                    mkstemp=DEFAULT,
+                    os_close=DEFAULT
+                ) as mocks:
+                    mocks['mkstemp'].return_value = (999, '/tmp/path')
+                    with pytest.raises(RuntimeError):
+                        self.cls.run(Mock(), Mock(), Mock(), Mock(), Mock())
+        assert out_file.read_text() == '\n\nmy_html_report'
 
     def test_run_exception_failure_cmd_failure(self):
         m_finished = Mock()
@@ -412,15 +433,16 @@ class TestRun(ReportTester):
             call('/tmp/path', 'w'),
             call().__enter__(),
             call().write('my_html_report'),
-            call().__exit__(None, None, None)
+            call().__exit__(None, None, None),
+            call().close()
         ]
         assert mocks['mkstemp'].mock_calls == [
             call(prefix='ecsjobs', text=True, suffix='.html')
         ]
         assert mocks['Popen'].mock_calls == [
             call(
-                '/bin/something', 'foo', stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-                universal_newlines=True
+                ['/bin/something', 'foo'], stdin=PIPE, stdout=PIPE,
+                stderr=STDOUT, universal_newlines=True
             )
         ]
         assert mocks['os_close'].mock_calls == [call(999)]
@@ -479,7 +501,8 @@ class TestRun(ReportTester):
             call('/fail/path', 'w'),
             call().__enter__(),
             call().write('my_html_report'),
-            call().__exit__(None, None, None)
+            call().__exit__(None, None, None),
+            call().close()
         ]
         assert mocks['mkstemp'].mock_calls == []
         assert mocks['os_close'].mock_calls == []

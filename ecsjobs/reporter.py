@@ -123,7 +123,7 @@ class Reporter(object):
             if failure_cmd is not None:
                 try:
                     p = Popen(
-                        *failure_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                        failure_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                         universal_newlines=True
                     )
                     out = p.communicate(input='\n\n%s' % report, timeout=120)[0]
